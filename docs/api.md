@@ -613,7 +613,7 @@ Cancellation is a part of the Edit function. Set `isCancelRequest` to `true`.
 
 Based on the initial documentation, the following points have inconsistencies or lack clarity. Could you please clarify them?
 
-1. **`CreditCard.holderType`**: The meanings for `holderType` values `0` and `1` are not specified. What do these represent?
+1. **`CreditCard.holderType`**: The meanings for `holderType` values `0` and `1` are not specified. What do these represent? Also, the example request for /booking/book shows `holderType` as `3`. Can you clarify the holderType enum meaning?
 2. **`Address.googleGeocode` Field vs. Requirement**: The documentation requires "*Either `googlePlaceId` OR `city`*", but the field shown in examples and the data model is `googleGeocode`. Should we be using `googleGeocode` or `googlePlaceId`? Or either one should work?
 3. **Footnotes in `Airport` Model**: The `Airport` section includes footnotes ("*Either googlePlaceId OR city must be provided*") that seem to belong to the `Address` model. This seems like a copy-paste error.
 4. **`EditableReservation.creditCard` Requirement**: The `EditableReservation` model marks the `creditCard` field as required, but the example request for the "Edit Reservation" endpoint does not include it. Is this field conditionally required, or is the example/model incorrect? I assumed its optional here.

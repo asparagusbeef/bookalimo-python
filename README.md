@@ -40,7 +40,7 @@ from bookalimo import (
     create_airport_location,
     create_address_location,
 )
-from bookalimo.models import RateType  # enums/models come from bookalimo.models
+from bookalimo.models import RateType
 
 async def main():
     # For Travel Agents (customers: pass is_customer=True)
