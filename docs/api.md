@@ -2,8 +2,6 @@
 
 This document provides a comprehensive overview of the Book-A-Limo API, detailing the available endpoints, request/response formats, and data models.
 
-NOTE: This is here for internal reference as we develop the wrapper. It is not intended to be a public facing document.
-
 ## Table of Contents
 - [Book-A-Limo API Documentation](#book-a-limo-api-documentation)
   - [Table of Contents](#table-of-contents)
