@@ -36,4 +36,6 @@ async def mock_client(
     """Mock client for testing."""
     from bookalimo._client import BookALimoClient
 
-    return BookALimoClient(http_client, credentials)
+    return BookALimoClient(
+        http_client, credentials, base_url="https://sandbox.bookalimo.com"
+    )
