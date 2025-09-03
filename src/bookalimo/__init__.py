@@ -2,6 +2,7 @@
 Book-A-Limo API Wrapper Package.
 Provides a clean, typed interface to the Book-A-Limo API.
 """
+
 import importlib.metadata
 
 from .wrapper import (
