@@ -5,6 +5,7 @@ Provides a clean, typed interface to the Book-A-Limo API.
 
 import importlib.metadata
 
+from ._logging import disable_debug_logging, enable_debug_logging
 from .wrapper import (
     BookALimo,
     create_address_location,
@@ -23,6 +24,8 @@ __all__ = [
     "create_stop",
     "create_passenger",
     "create_credit_card",
+    "enable_debug_logging",
+    "disable_debug_logging",
 ]
 
 __version__ = importlib.metadata.version(__package__ or __name__)

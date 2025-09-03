@@ -7,6 +7,36 @@
 
 A modern, async Python wrapper for the Book-A-Limo API with full type support. Built on top of `httpx` and `pydantic`.
 
+## Table of Contents
+
+- [Book-A-Limo Python SDK](#book-a-limo-python-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Quick Start](#quick-start)
+  - [Authentication](#authentication)
+  - [Core Operations](#core-operations)
+    - [Get Pricing](#get-pricing)
+    - [Book a Reservation](#book-a-reservation)
+  - [Location Builders](#location-builders)
+    - [Airport Locations](#airport-locations)
+    - [Address Locations](#address-locations)
+    - [Stops](#stops)
+  - [Advanced](#advanced)
+    - [Using Account Info (Travel Agents)](#using-account-info-travel-agents)
+    - [Edit / Cancel a Reservation](#edit--cancel-a-reservation)
+  - [Error Handling](#error-handling)
+  - [Logging](#logging)
+    - [Enable Debug Logging](#enable-debug-logging)
+    - [Custom Logging](#custom-logging)
+    - [Security](#security)
+    - [Disable Logging](#disable-logging)
+  - [Development](#development)
+  - [Security Notes](#security-notes)
+  - [License](#license)
+  - [Changelog](#changelog)
+
 ## Features
 
 * **Asynchronous**
@@ -32,7 +62,6 @@ pip install bookalimo
 
 ```python
 import asyncio
-from httpx import AsyncClient
 
 from bookalimo import (
     BookALimo,
@@ -228,6 +257,50 @@ except BookALimoError as e:
     print(f"API Error: {e}")
     print(f"Status Code: {e.status_code}")
     print(f"Response Data: {e.response_data}")
+```
+
+## Logging
+
+By default, no log messages appear. Enable logging for debugging or monitoring.
+
+### Enable Debug Logging
+
+```python
+import bookalimo
+
+bookalimo.enable_debug_logging()
+
+async with bookalimo.BookALimo(credentials) as client:
+    reservations = await client.list_reservations()  # Shows API calls, timing, etc.
+```
+
+Or use the environment variable:
+```bash
+export BOOKALIMO_LOG_LEVEL=DEBUG
+```
+
+### Custom Logging
+
+```python
+import logging
+import bookalimo
+
+logging.basicConfig(level=logging.INFO)
+bookalimo.get_logger().setLevel(logging.WARNING)  # Production setting
+```
+
+### Security
+
+Sensitive data is automatically redacted in logs:
+- Passwords, tokens, CVV codes: `******`
+- API keys: `abc123…89` (first 6, last 2 chars)
+- Emails: `j***@example.com`
+- Credit cards: `**** **** **** 1234`
+
+### Disable Logging
+
+```python
+bookalimo.disable_debug_logging()
 ```
 
 ## Development

@@ -3,13 +3,17 @@ Base HTTP client for Book-A-Limo API.
 Handles authentication, headers, and common request/response patterns.
 """
 
+import logging
 from enum import Enum
 from functools import lru_cache
-from typing import Any, Optional, cast
+from time import perf_counter
+from typing import Any, Optional, TypeVar, cast, overload
+from uuid import uuid4
 
 import httpx
 from pydantic import BaseModel
 
+from ._logging import get_logger
 from .exceptions import BookALimoError
 from .models import (
     BookRequest,
@@ -28,6 +32,10 @@ from .models import (
     PriceRequestAuthenticated,
     PriceResponse,
 )
+
+logger = get_logger("client")
+
+T = TypeVar("T")
 
 
 @lru_cache(maxsize=1)
@@ -63,6 +71,13 @@ class BookALimoClient:
         }
         self.base_url = base_url
         self.http_timeout = http_timeout
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "Client initialized (base_url=%s, timeout=%s, user_agent=%s)",
+                self.base_url,
+                self.http_timeout,
+                self.headers.get("user-agent"),
+            )
 
     def _convert_model_to_api_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """
@@ -128,6 +143,19 @@ class BookALimoClient:
 
         return converted
 
+    @overload
+    def handle_enums(self, obj: Enum) -> Any: ...
+    @overload
+    def handle_enums(self, obj: dict[str, Any]) -> dict[str, Any]: ...
+    @overload
+    def handle_enums(self, obj: list[Any]) -> list[Any]: ...
+    @overload
+    def handle_enums(self, obj: tuple[Any, ...]) -> tuple[Any, ...]: ...
+    @overload
+    def handle_enums(self, obj: set[Any]) -> set[Any]: ...
+    @overload
+    def handle_enums(self, obj: Any) -> Any: ...
+
     def handle_enums(self, obj: Any) -> Any:
         """
         Simple utility to convert enums to their values for JSON serialization.
@@ -158,6 +186,21 @@ class BookALimoClient:
             result.append(char.lower())
         return "".join(result)
 
+    def prepare_data(self, data: BaseModel) -> dict[str, Any]:
+        """
+        Prepare data for API requests by converting it to the appropriate format.
+
+        Args:
+            data: The data to prepare, as a Pydantic model instance.
+
+        Returns:
+            A dictionary representation of the data, ready for API consumption.
+        """
+        api_data = self._convert_model_to_api_dict(data.model_dump())
+        api_data = self._remove_none_values(api_data)
+        api_data = self.handle_enums(api_data)
+        return cast(dict[str, Any], api_data)
+
     async def _make_request(
         self,
         endpoint: str,
@@ -165,29 +208,24 @@ class BookALimoClient:
         model: type[BaseModel],
         timeout: Optional[float] = None,
     ) -> BaseModel:
-        """
-        Make a POST request to the API with proper error handling.
-
-        Args:
-            endpoint: API endpoint (e.g., "/booking/reservation/list/")
-            data: Request payload as dict or Pydantic model
-            model: Pydantic model to parse the response into
-            timeout: Request timeout in seconds
-
-        Returns:
-            Parsed JSON response as pydantic model
-
-        Raises:
-            BookALimoError: On API errors or HTTP errors
-        """
         url = f"{self.base_url}{endpoint}"
 
         # Convert model data to API format
-        api_data = self._convert_model_to_api_dict(data.model_dump())
+        api_data = self.prepare_data(data)
 
-        # Remove None values to avoid API issues
-        api_data = self._remove_none_values(api_data)
-        api_data = self.handle_enums(api_data)
+        debug_on = logger.isEnabledFor(logging.DEBUG)
+        req_id = None
+        if debug_on:
+            req_id = uuid4().hex[:8]
+            start = perf_counter()
+            body_keys = sorted(k for k in api_data.keys() if k != "credentials")
+            logger.debug(
+                "→ [%s] POST %s timeout=%s body_keys=%s",
+                req_id,
+                endpoint,
+                timeout or self.http_timeout,
+                body_keys,
+            )
 
         try:
             response = await self.client.post(
@@ -198,11 +236,13 @@ class BookALimoClient:
             )
             response.raise_for_status()
 
-            # Handle different HTTP status codes
+            # HTTP 4xx/5xx already raise in httpx, but keep defensive check:
             if response.status_code >= 400:
-                error_msg = f"HTTP {response.status_code}: {response.text}"
+                error_msg = f"HTTP {response.status_code}"
+                if debug_on:
+                    logger.warning("× [%s] %s %s", req_id or "-", endpoint, error_msg)
                 raise BookALimoError(
-                    error_msg,
+                    f"{error_msg}: {response.text}",
                     status_code=response.status_code,
                     response_data={"raw_response": response.text},
                 )
@@ -210,40 +250,91 @@ class BookALimoClient:
             try:
                 json_data = response.json()
             except ValueError as e:
+                if debug_on:
+                    logger.warning("× [%s] %s invalid JSON", req_id or "-", endpoint)
                 raise BookALimoError(f"Invalid JSON response: {str(e)}") from e
 
-            # Check for API-level errors
+            # API-level errors
             if isinstance(json_data, dict):
-                if "error" in json_data and json_data["error"]:
+                if json_data.get("error"):
+                    if debug_on:
+                        logger.warning("× [%s] %s API error", req_id or "-", endpoint)
                     raise BookALimoError(
                         f"API Error: {json_data['error']}", response_data=json_data
                     )
-
-                # Check success flag if present
                 if "success" in json_data and not json_data["success"]:
-                    error_msg = json_data.get("error", "Unknown API error")
-                    raise BookALimoError(
-                        f"API Error: {error_msg}", response_data=json_data
-                    )
+                    msg = json_data.get("error", "Unknown API error")
+                    if debug_on:
+                        logger.warning("× [%s] %s API error", req_id or "-", endpoint)
+                    raise BookALimoError(f"API Error: {msg}", response_data=json_data)
 
-            # Convert response back to model format
+            if debug_on:
+                dur_ms = (perf_counter() - start) * 1000.0
+                reqid_hdr = response.headers.get(
+                    "x-request-id"
+                ) or response.headers.get("request-id")
+                content_len = None
+                try:
+                    content_len = len(response.content)
+                except Exception:
+                    pass
+                logger.debug(
+                    "← [%s] %s %s in %.1f ms len=%s reqid=%s",
+                    req_id,
+                    response.status_code,
+                    endpoint,
+                    dur_ms,
+                    content_len,
+                    reqid_hdr,
+                )
+
             return model.model_validate(self._convert_api_to_model_dict(json_data))
 
         except httpx.TimeoutException:
+            if debug_on:
+                logger.warning(
+                    "× [%s] %s timeout after %ss",
+                    req_id or "-",
+                    endpoint,
+                    timeout or self.http_timeout,
+                )
             raise BookALimoError(
                 f"Request timeout after {timeout or self.http_timeout}s"
             ) from None
         except httpx.ConnectError:
+            if debug_on:
+                logger.warning("× [%s] %s connection error", req_id or "-", endpoint)
             raise BookALimoError(
                 "Connection error - unable to reach Book-A-Limo API"
             ) from None
         except httpx.HTTPError as e:
+            if debug_on:
+                logger.warning(
+                    "× [%s] %s HTTP error: %s",
+                    req_id or "-",
+                    endpoint,
+                    e.__class__.__name__,
+                )
             raise BookALimoError(f"HTTP Error: {str(e)}") from e
         except BookALimoError:
-            # Re-raise our custom errors
+            # already logged above where relevant
             raise
         except Exception as e:
+            if debug_on:
+                logger.warning(
+                    "× [%s] %s unexpected error: %s",
+                    req_id or "-",
+                    endpoint,
+                    e.__class__.__name__,
+                )
             raise BookALimoError(f"Unexpected error: {str(e)}") from e
+
+    @overload
+    def _remove_none_values(self, data: dict[str, Any]) -> dict[str, Any]: ...
+    @overload
+    def _remove_none_values(self, data: list[Any]) -> list[Any]: ...
+    @overload
+    def _remove_none_values(self, data: Any) -> Any: ...
 
     def _remove_none_values(self, data: Any) -> Any:
         """Recursively remove None values from data structure."""

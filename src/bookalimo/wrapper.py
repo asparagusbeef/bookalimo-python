@@ -3,12 +3,14 @@ High-level API wrapper for Book-A-Limo operations.
 Provides clean, LLM-friendly functions that abstract API complexities.
 """
 
+import logging
 from types import TracebackType
 from typing import Any, Optional
 
 from httpx import AsyncClient
 
 from ._client import BookALimoClient
+from ._logging import get_logger, log_call
 from .exceptions import BookALimoError
 from .models import (
     Address,
@@ -34,6 +36,8 @@ from .models import (
     Stop,
 )
 
+logger = get_logger("wrapper")
+
 
 class BookALimo:
     """
@@ -45,7 +49,7 @@ class BookALimo:
         self,
         credentials: Credentials,
         http_client: Optional[AsyncClient] = None,
-        base_url: str = "https://api.bookalimo.com",
+        base_url: str = "https://www.bookalimo.com/web/api",
         http_timeout: float = 5.0,
         **kwargs: Any,
     ):
@@ -66,11 +70,20 @@ class BookALimo:
             http_timeout=http_timeout,
             **kwargs,
         )
+        if logger.isEnabledFor(logging.DEBUG):  # NEW: tiny, safe init log
+            logger.debug(
+                "BookALimo initialized (base_url=%s, timeout=%s, owns_http_client=%s)",
+                base_url,
+                http_timeout,
+                self._owns_http_client,
+            )
 
     async def aclose(self) -> None:
         """Close the HTTP client if we own it."""
         if self._owns_http_client and not self.http_client.is_closed:
             await self.http_client.aclose()
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("HTTP client closed")
 
     async def __aenter__(self) -> "BookALimo":
         """Async context manager entry."""
@@ -85,6 +98,7 @@ class BookALimo:
         """Async context manager exit."""
         await self.aclose()
 
+    @log_call(include_params=["is_archive"], operation="list_reservations")
     async def list_reservations(
         self, is_archive: bool = False
     ) -> ListReservationsResponse:
@@ -104,6 +118,7 @@ class BookALimo:
         except Exception as e:
             raise BookALimoError(f"Failed to list reservations: {str(e)}") from e
 
+    @log_call(include_params=["confirmation"], operation="get_reservation")
     async def get_reservation(self, confirmation: str) -> GetReservationResponse:
         """
         Get detailed reservation information.
@@ -121,6 +136,15 @@ class BookALimo:
         except Exception as e:
             raise BookALimoError(f"Failed to get reservation: {str(e)}") from e
 
+    @log_call(
+        include_params=[
+            "rate_type",
+            "date_time",
+            "passengers",
+            "luggage",
+        ],
+        operation="get_prices",
+    )
     async def get_prices(
         self,
         rate_type: RateType,
@@ -137,8 +161,8 @@ class BookALimo:
         Args:
             rate_type: 0=P2P, 1=Hourly (or string names)
             date_time: 'MM/dd/yyyy hh:mm tt' format
-            pickup_location: Location dict
-            dropoff_location: Location dict
+            pickup_location: Location
+            dropoff_location: Location
             passengers: Number of passengers
             luggage: Number of luggage pieces
             **kwargs: Optional fields like stops, account, car_class_code, etc.
@@ -184,6 +208,15 @@ class BookALimo:
         except Exception as e:
             raise BookALimoError(f"Failed to get prices: {str(e)}") from e
 
+    @log_call(
+        include_params=["token", "details"],
+        transforms={
+            "details": lambda d: sorted(
+                [k for k, v in (d or {}).items() if v is not None]
+            ),
+        },
+        operation="set_details",
+    )
     async def set_details(self, token: str, **details: Any) -> DetailsResponse:
         """
         Set reservation details and get updated pricing.
@@ -213,6 +246,10 @@ class BookALimo:
         except Exception as e:
             raise BookALimoError(f"Failed to set details: {str(e)}") from e
 
+    @log_call(
+        include_params=["token", "method", "promo", "credit_card"],
+        operation="book",
+    )
     async def book(
         self,
         token: str,
@@ -255,6 +292,15 @@ class BookALimo:
         except Exception as e:
             raise BookALimoError(f"Failed to book reservation: {str(e)}") from e
 
+    @log_call(
+        include_params=["confirmation", "is_cancel_request", "changes"],
+        transforms={
+            "changes": lambda d: sorted(
+                [k for k, v in (d or {}).items() if v is not None]
+            ),
+        },
+        operation="edit_reservation",
+    )
     async def edit_reservation(
         self, confirmation: str, is_cancel_request: bool = False, **changes: Any
     ) -> EditReservationResponse:
