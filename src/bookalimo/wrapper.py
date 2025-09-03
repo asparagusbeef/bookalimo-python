@@ -44,7 +44,8 @@ class BookALimo:
         self,
         credentials: Credentials,
         http_client: Optional[AsyncClient] = None,
-        sandbox: bool = False,
+        base_url: str = "https://api.bookalimo.com",
+        http_timeout: float = 5.0,
         **kwargs: Any,
     ):
         """
@@ -52,7 +53,6 @@ class BookALimo:
 
         Args:
             credentials: User ID and password hash for authentication.
-            sandbox: Set to True to use the sandbox environment.
             http_client: Optional custom httpx.AsyncClient instance.
             **kwargs: Additional options passed to the BookALimoClient.
         """
@@ -60,8 +60,9 @@ class BookALimo:
         self.http_client = http_client or AsyncClient()
         self.client = BookALimoClient(
             credentials=credentials,
-            sandbox=sandbox,
             client=self.http_client,
+            base_url=base_url,
+            http_timeout=http_timeout,
             **kwargs,
         )
 

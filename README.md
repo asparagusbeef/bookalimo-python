@@ -69,16 +69,6 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### Using the Sandbox
-
-```python
-async with AsyncClient() as http_client:
-    async with BookALimo(
-        credentials, http_client=http_client, sandbox=True
-    ) as client:
-        ...
-```
-
 ## Authentication
 
 ```python
@@ -262,7 +252,6 @@ mkdocs serve
 
 * Never log raw passwords or credit card numbers.
 * Store credentials securely (e.g., environment variables, secrets managers).
-* Use sandbox for testing.
 
 ## License
 

@@ -63,9 +63,7 @@ class BookALimoClient:
         credentials: Credentials,
         user_agent: str = "bookalimo-python",
         version: Optional[str] = None,
-        sandbox: bool = False,
         base_url: str = "https://api.bookalimo.com",
-        base_url_sandbox: str = "https://sandbox.bookalimo.com",
         http_timeout: float = 5.0,
     ):
         """Initialize the client with an HTTP client."""
@@ -76,9 +74,7 @@ class BookALimoClient:
             "content-type": "application/json",
             "user-agent": f"{user_agent}/{version}",
         }
-        self.sandbox = sandbox
         self.base_url = base_url
-        self.base_url_sandbox = base_url_sandbox
         self.http_timeout = http_timeout
 
     def _convert_model_to_api_dict(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -175,10 +171,6 @@ class BookALimoClient:
             result.append(char.lower())
         return "".join(result)
 
-    def get_base_url(self) -> str:
-        """Get the base URL for the API."""
-        return self.base_url_sandbox if self.sandbox else self.base_url
-
     async def _make_request(
         self,
         endpoint: str,
@@ -201,7 +193,7 @@ class BookALimoClient:
         Raises:
             BookALimoError: On API errors or HTTP errors
         """
-        url = f"{self.get_base_url()}{endpoint}"
+        url = f"{self.base_url}{endpoint}"
 
         # Convert model data to API format
         api_data = self._convert_model_to_api_dict(data.model_dump())
