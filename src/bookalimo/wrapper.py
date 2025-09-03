@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from httpx import AsyncClient
 
-from .client import BookALimoClient, BookALimoError
+from ._client import BookALimoClient, BookALimoError
 from .models import (
     Address,
     Airport,
@@ -34,22 +34,44 @@ from .models import (
 )
 
 
-class BookALimoWrapper:
+class BookALimo:
     """
     High-level wrapper for Book-A-Limo API operations.
     Provides small, LLM-friendly functions that map 1:1 to API endpoints.
     """
 
-    def __init__(self, http_client: AsyncClient, credentials: Credentials):
-        self.http_client = http_client
-        self.credentials = credentials
+    def __init__(
+        self,
+        credentials: Credentials,
+        http_client: Optional[AsyncClient] = None,
+        sandbox: bool = False,
+        **kwargs: Any,
+    ):
+        """
+        Initializes the BookALimo API wrapper.
 
-    async def __aenter__(self) -> "BookALimoWrapper":
-        """Async context manager entry."""
+        Args:
+            credentials: User ID and password hash for authentication.
+            sandbox: Set to True to use the sandbox environment.
+            http_client: Optional custom httpx.AsyncClient instance.
+            **kwargs: Additional options passed to the BookALimoClient.
+        """
+        self._owns_http_client = http_client is None
+        self.http_client = http_client or AsyncClient()
         self.client = BookALimoClient(
-            client=self.http_client, credentials=self.credentials
+            credentials=credentials,
+            sandbox=sandbox,
+            client=self.http_client,
+            **kwargs,
         )
-        await self.client.__aenter__()
+
+    async def aclose(self) -> None:
+        """Close the HTTP client if we own it."""
+        if self._owns_http_client and not self.http_client.is_closed:
+            await self.http_client.aclose()
+
+    async def __aenter__(self) -> "BookALimo":
+        """Async context manager entry."""
         return self
 
     async def __aexit__(
@@ -59,8 +81,7 @@ class BookALimoWrapper:
         exc_tb: Optional[TracebackType],
     ) -> None:
         """Async context manager exit."""
-        if self.client:
-            await self.client.__aexit__(exc_type, exc_val, exc_tb)
+        await self.aclose()
 
     async def list_reservations(
         self, is_archive: bool = False

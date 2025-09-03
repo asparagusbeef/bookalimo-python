@@ -9,7 +9,7 @@ from bookalimo import create_credentials
 from bookalimo.models import Credentials
 
 if TYPE_CHECKING:
-    from bookalimo.client import BookALimoClient
+    from bookalimo._client import BookALimoClient
 
 
 @pytest.fixture
@@ -33,6 +33,6 @@ async def mock_client(
     http_client: httpx.AsyncClient, credentials: Credentials
 ) -> "BookALimoClient":
     """Mock client for testing."""
-    from bookalimo.client import BookALimoClient
+    from bookalimo._client import BookALimoClient
 
     return BookALimoClient(http_client, credentials, sandbox=True)

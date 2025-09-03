@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type hints and validation
 - Comprehensive test suite
 
-## [0.1.0] - 2024-01-XX
+## [0.1.0] - 2024-09-02
 
 ### Added
 - Initial release of bookalimo Python SDK
@@ -24,3 +24,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete type hints
 - Error handling and custom exceptions
 - Documentation with MkDocs
+
+## [0.1.1] - 2025-09-02

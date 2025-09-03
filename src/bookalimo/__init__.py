@@ -2,10 +2,10 @@
 Book-A-Limo API Wrapper Package.
 Provides a clean, typed interface to the Book-A-Limo API.
 """
+import importlib.metadata
 
-from .client import BookALimoClient, BookALimoError
 from .wrapper import (
-    BookALimoWrapper,
+    BookALimo,
     create_address_location,
     create_airport_location,
     create_credentials,
@@ -15,9 +15,7 @@ from .wrapper import (
 )
 
 __all__ = [
-    "BookALimoWrapper",
-    "BookALimoClient",
-    "BookALimoError",
+    "BookALimo",
     "create_credentials",
     "create_address_location",
     "create_airport_location",
@@ -25,3 +23,5 @@ __all__ = [
     "create_passenger",
     "create_credit_card",
 ]
+
+__version__ = importlib.metadata.version(__package__ or __name__)

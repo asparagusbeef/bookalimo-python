@@ -4,12 +4,11 @@ Handles authentication, headers, and common request/response patterns.
 """
 
 from enum import Enum
-from types import TracebackType
+from functools import lru_cache
 from typing import Any, Optional, cast
 
 import httpx
 from pydantic import BaseModel
-from typing_extensions import Self
 
 from .models import (
     BookRequest,
@@ -28,6 +27,14 @@ from .models import (
     PriceRequestAuthenticated,
     PriceResponse,
 )
+
+
+@lru_cache(maxsize=1)
+def get_version() -> str:
+    """Get the version of the BookALimo client."""
+    from bookalimo import __version__
+
+    return __version__
 
 
 class BookALimoError(Exception):
@@ -55,7 +62,7 @@ class BookALimoClient:
         client: httpx.AsyncClient,
         credentials: Credentials,
         user_agent: str = "bookalimo-python",
-        version: str = "1.0.0",
+        version: Optional[str] = None,
         sandbox: bool = False,
         base_url: str = "https://api.bookalimo.com",
         base_url_sandbox: str = "https://sandbox.bookalimo.com",
@@ -63,6 +70,7 @@ class BookALimoClient:
     ):
         """Initialize the client with an HTTP client."""
         self.client = client
+        version = version or get_version()
         self.credentials = credentials
         self.headers = {
             "content-type": "application/json",
@@ -72,24 +80,6 @@ class BookALimoClient:
         self.base_url = base_url
         self.base_url_sandbox = base_url_sandbox
         self.http_timeout = http_timeout
-
-    async def __aenter__(self) -> Self:
-        """Async context manager entry."""
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> bool:
-        """Async context manager exit."""
-        await self.client.aclose()
-        return False
-
-    async def close(self) -> None:
-        """Close the HTTP client."""
-        await self.client.aclose()
 
     def _convert_model_to_api_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """

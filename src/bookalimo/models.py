@@ -17,22 +17,6 @@ icao_data = airportsdata.load("ICAO")
 iata_data = airportsdata.load("IATA")
 
 
-def validate_us(state_code: str, state_name: str) -> tuple[str, str]:
-    """Validate that state_code is a valid US state code and state_name is a valid US state name."""
-    code_match = us.states.lookup(state_code)
-    name_match = us.states.lookup(state_name)
-    if not code_match and not name_match:
-        raise ValueError(f"Invalid state code or name: {state_code} or {state_name}")
-    if code_match and name_match and code_match != name_match:
-        raise ValueError(
-            f"State code and name do not match: {state_code} and {state_name}"
-        )
-    match = code_match or name_match
-    if match:
-        return match.abbr, match.name
-    raise ValueError(f"Invalid state code or name: {state_code} or {state_name}")
-
-
 class RateType(Enum):
     """Rate types for reservations."""
 

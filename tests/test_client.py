@@ -3,7 +3,7 @@
 import httpx
 import pytest
 import respx
-from bookalimo.client import BookALimoClient, BookALimoError
+from bookalimo._client import BookALimoClient, BookALimoError
 from bookalimo.models import ListReservationsResponse
 
 

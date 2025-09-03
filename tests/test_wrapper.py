@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 from bookalimo import (
-    BookALimoWrapper,
+    BookALimo,
     create_address_location,
     create_airport_location,
     create_credentials,
@@ -18,7 +18,7 @@ async def test_wrapper_context_manager() -> None:
     credentials = create_credentials("TEST", "password")
 
     async with httpx.AsyncClient() as http_client:
-        async with BookALimoWrapper(http_client, credentials) as wrapper:
+        async with BookALimo(credentials, http_client=http_client) as wrapper:
             assert wrapper is not None
             assert hasattr(wrapper, "client")
 
@@ -50,7 +50,7 @@ async def test_get_prices() -> None:
     }
 
     async with httpx.AsyncClient() as http_client:
-        async with BookALimoWrapper(http_client, credentials) as wrapper:
+        async with BookALimo(credentials, http_client=http_client) as wrapper:
             with respx.mock:
                 respx.post().mock(return_value=httpx.Response(200, json=mock_response))
 

@@ -9,39 +9,46 @@ A modern, async Python wrapper for the Book-A-Limo API with full type support.
 
 ## Features
 
-- **Async/await support** - Built on httpx for modern async Python
-- **Full type hints** - Complete typing support with Pydantic models
-- **Input validation** - Automatic validation of API inputs
-- **Clean interface** - Simple, intuitive methods for all API operations
-- **Error handling** - Comprehensive error handling with custom exceptions
-- **Test coverage** - Extensive test suite with mocking
+* **Async/await** (built on `httpx`)
+* **Typed Pydantic models** for requests & responses
+* **Input validation**
+* **Clean, minimal interface** for each API operation
+* **Custom exceptions & error handling**
+* **Tests and examples**
 
-## Quick Start
+## Requirements
 
-### Installation
+* Python **3.9+** (`pyproject.toml` sets `requires-python = ">=3.9"`)
+* An async event loop (examples use `asyncio`)
+* Time strings use **`MM/dd/yyyy hh:mm tt`** (e.g., `09/05/2025 12:44 AM`)
+
+## Installation
 
 ```bash
 pip install bookalimo
 ```
 
-### Basic Usage
+## Quick Start
 
 ```python
 import asyncio
-import httpx
-from bookalimo import BookALimoWrapper, create_credentials
+from httpx import AsyncClient
+
+from bookalimo import (
+    BookALimo,
+    create_credentials,
+    create_airport_location,
+    create_address_location,
+)
+from bookalimo.models import RateType  # enums/models come from bookalimo.models
 
 async def main():
+    # For Travel Agents (customers: pass is_customer=True)
     credentials = create_credentials("TA10007", "your_password")
 
-    async with httpx.AsyncClient() as http_client:
-        async with BookALimoWrapper(http_client, credentials) as client:
-            # List reservations
-            reservations = await client.list_reservations()
-            print(f"Found {len(reservations.reservations)} reservations")
-
-            # Get pricing
-            from bookalimo import create_airport_location, RateType
+    async with AsyncClient() as http_client:
+        async with BookALimo(credentials, http_client=http_client) as client:
+            # Build locations
             pickup = create_airport_location("JFK", "New York")
             dropoff = create_address_location("53 East 34th Street, Manhattan")
 
@@ -51,7 +58,7 @@ async def main():
                 pickup=pickup,
                 dropoff=dropoff,
                 passengers=2,
-                luggage=3
+                luggage=3,
             )
 
             print(f"Available cars: {len(prices.prices)}")
@@ -62,70 +69,91 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## API Reference
+### Using the Sandbox
 
-### Authentication
+```python
+async with AsyncClient() as http_client:
+    async with BookALimo(
+        credentials, http_client=http_client, sandbox=True
+    ) as client:
+        ...
+```
+
+## Authentication
 
 ```python
 from bookalimo import create_credentials
 
-# For Travel Agents
-credentials = create_credentials("TA10007", "password", is_customer=False)
+# Travel Agents
+ta_creds = create_credentials("TA10007", "password", is_customer=False)
 
-# For Customers
-credentials = create_credentials("customer@email.com", "password", is_customer=True)
+# Customers
+cust_creds = create_credentials("customer@email.com", "password", is_customer=True)
 ```
 
-### Core Operations
+## Core Operations
 
-#### List Reservations
 ```python
+# List Reservations
 reservations = await client.list_reservations(is_archive=False)
-```
 
-#### Get Reservation Details
-```python
+# Get Reservation Details
 details = await client.get_reservation("5452773")
 ```
 
-#### Get Pricing
+### Get Pricing
+
 ```python
+from bookalimo.models import RateType
+
 prices = await client.get_prices(
     rate_type=RateType.P2P,
     date_time="09/05/2025 12:44 AM",
-    pickup=pickup_location,
-    dropoff=dropoff_location,
+    pickup=pickup,            # Location
+    dropoff=dropoff,          # Location
     passengers=2,
-    luggage=3
+    luggage=3,
+    # Optional kwargs:
+    # hours=2, stops=[...], account=..., passenger=..., rewards=[...],
+    # car_class_code="SD", pets=0, car_seats=0, boosters=0, infants=0,
+    # customer_comment="..."
 )
 ```
 
-#### Book Reservation
+### Book a Reservation
+
 ```python
-# Set details first
+from bookalimo import create_credit_card, create_passenger
+from bookalimo.models import CardHolderType
+
+# Optionally set details first (select car class, add passenger, etc.)
 details = await client.set_details(
     token=prices.token,
     car_class_code="SD",
-    passenger=create_passenger("John", "Smith", "+19173334455")
+    passenger=create_passenger("John", "Smith", "+19173334455"),
 )
 
 # Book with credit card
-from bookalimo import create_credit_card, CardHolderType
 card = create_credit_card(
-    "4184 7284 3916 0355",
-    "John Smith",
-    CardHolderType.PERSONAL,
-    "01/28",
-    "123"
+    number="4111 1111 1111 1111",  # test PAN
+    card_holder="John Smith",
+    holder_type=CardHolderType.PERSONAL,
+    expiration="01/28",
+    cvv="123",
+    zip_code="10016",
 )
 
 booking = await client.book(token=prices.token, credit_card=card)
 print(f"Booked! Confirmation: {booking.reservation_id}")
+
+# Or charge account
+booking = await client.book(token=prices.token, method="charge")
 ```
 
-## Location Types
+## Location Builders
 
 ### Airport Locations
+
 ```python
 from bookalimo import create_airport_location
 
@@ -134,25 +162,76 @@ pickup = create_airport_location(
     city_name="New York",
     airline_code="UA",
     flight_number="UA1234",
-    terminal="7"
+    terminal="7",
 )
 ```
 
 ### Address Locations
+
 ```python
 from bookalimo import create_address_location
 
 dropoff = create_address_location(
-    address="53 East 34th Street",
-    district="Manhattan",
-    zip_code="10016"
+    address="53 East 34th Street, Manhattan",
+    zip_code="10016",
+)
+```
+
+### Stops
+
+```python
+from bookalimo import create_stop
+
+stops = [
+    create_stop("Brooklyn Bridge", is_en_route=False),
+    create_stop("Empire State Building", is_en_route=True),
+]
+```
+
+## Advanced
+
+### Using Account Info (Travel Agents)
+
+```python
+from bookalimo.models import Account  # models (not re-exported at top-level)
+
+account = Account(
+    id="TA10007",
+    department="Sales",
+    booker_first_name="Jane",
+    booker_last_name="Agent",
+    booker_email="jane@agency.com",
+    booker_phone="+19173334455",
+)
+
+prices = await client.get_prices(
+    # ... required args
+    account=account,
+)
+```
+
+### Edit / Cancel a Reservation
+
+```python
+# Edit (e.g., add note or change passengers). Omitting fields leaves them unchanged.
+edit_result = await client.edit_reservation(
+    confirmation="5452773",
+    is_cancel_request=False,
+    passengers=3,
+    other="Gate pickup",
+)
+
+# Cancel
+cancel_result = await client.edit_reservation(
+    confirmation="5452773",
+    is_cancel_request=True,
 )
 ```
 
 ## Error Handling
 
 ```python
-from bookalimo import BookALimoError
+from bookalimo._client import BookALimoError  # currently defined here
 
 try:
     reservations = await client.list_reservations()
@@ -162,96 +241,33 @@ except BookALimoError as e:
     print(f"Response Data: {e.response_data}")
 ```
 
-## Advanced Usage
-
-### Using with Account Information (Travel Agents)
-```python
-from bookalimo import Account
-
-account = Account(
-    id="TA10007",
-    department="Sales",
-    booker_first_name="Jane",
-    booker_last_name="Agent",
-    booker_email="jane@agency.com",
-    booker_phone="+19173334455"
-)
-
-prices = await client.get_prices(
-    # ... other params
-    account=account
-)
-```
-
-### Adding Stops
-```python
-from bookalimo import create_stop
-
-stops = [
-    create_stop("Brooklyn Bridge", is_en_route=False),
-    create_stop("Empire State Building", is_en_route=True)
-]
-
-prices = await client.get_prices(
-    # ... other params
-    stops=stops
-)
-```
-
 ## Development
 
-### Setup
 ```bash
+# Clone & setup
 git clone https://github.com/yourusername/bookalimo-python.git
 cd bookalimo-python
 pip install -e ".[dev]"
 pre-commit install
-```
 
-### Testing
-```bash
+# Run tests
 pytest
 pytest --cov=bookalimo --cov-report=html
-```
 
-### Documentation
-```bash
+# Docs (MkDocs)
 mkdocs serve
 ```
 
-## Contributing
+## Security Notes
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+* Never log raw passwords or credit card numbers.
+* Store credentials securely (e.g., environment variables, secrets managers).
+* Use sandbox for testing.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see [`LICENSE`](LICENSE).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a history of changes.
-```
-
-**Create `LICENSE`:**
-```
-MIT License
-
-Copyright (c) 2024 [Your Name]
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+See [`CHANGELOG.md`](CHANGELOG.md) for release history.
