@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 import pytest
+
 from bookalimo import create_credentials
 from bookalimo.models import Credentials
 
