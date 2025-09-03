@@ -191,7 +191,7 @@ Use this function to get full information about a reservation. The `reservation`
 | Name | Data type | Required | Remark |
 | :--- | :--- | :--- | :--- |
 | `credentials` | [Credentials](#credentials) | Yes | User or account credentials. |
-| `rateType` | int | Yes | `0`: , `1`: |
+| `rateType` | int | Yes | `0`: P2P, `1`: Hourly, `2`: Daily, `3`: Tour, `4`: Round Trip, `5`: RT Half |
 | `dateTime` | string | Yes | Required format is `MM/dd/yyyy hh:mm tt` |
 | `pickup` | [Location](#location) | Yes | Pick up location. |
 | `dropoff` | [Location](#location) | Yes | Drop-off location. |
@@ -529,15 +529,6 @@ Cancellation is a part of the Edit function. Set `isCancelRequest` to `true`.
 | `pickupTime` | string | Yes | Local time of the reservation. |
 | `stops` | [Stop](#stop)[] | No | Array of stops. |
 | `creditCard` | [CreditCard](#creditcard) | Yes | Credit card info. |
-> [!NOTE]
-> **Source Inconsistency**: The data model marks `creditCard` as required, but the provided **Edit Reservation** example request body omits it.
-| `passengers` | byte | Yes | Passengers quantity. |
-| `luggage` | byte | Yes | Luggage quantity. |
-| `pets` | byte | Yes | Pets quantity. |
-| `carSeats` | byte | Yes | Car seats quantity. |
-| `boosters` | byte | Yes | Boosters quantity. |
-| `infants` | byte | Yes | Infants quantity. |
-| `other` | string | Yes | Other changes that are not listed. |
 
 ### Location
 | Name | Data type | Required | Remark |
@@ -623,7 +614,7 @@ Cancellation is a part of the Edit function. Set `isCancelRequest` to `true`.
 Based on the initial documentation, the following points have inconsistencies or lack clarity. Could you please clarify them?
 
 1. **`CreditCard.holderType`**: The meanings for `holderType` values `0` and `1` are not specified. What do these represent?
-2. **`Address.googleGeocode` Field vs. Requirement**: The documentation requires "*Either `googlePlaceId` OR `city`*", but the field shown in examples and the data model is `googleGeocode`. Should we be using `googleGeocode` or `googlePlaceId`?
-3. **Footnotes in `Airport` Model**: The `Airport` section includes footnotes ("*Either googlePlaceId OR city must be provided*") that seem to belong to the `Address` model. Can you confirm if this is a copy-paste error and these notes can be ignored for airports?
-4. **`EditableReservation.creditCard` Requirement**: The `EditableReservation` model marks the `creditCard` field as required, but the example request for the "Edit Reservation" endpoint does not include it. Is this field conditionally required, or is the example/model incorrect?
-5. **`Get Prices.rateType` Meanings**: The descriptions for `rateType` values `0` and `1` are blank. Can you provide the official meanings? (Inference suggests `0`=Point-to-Point, `1`=Hourly).
+2. **`Address.googleGeocode` Field vs. Requirement**: The documentation requires "*Either `googlePlaceId` OR `city`*", but the field shown in examples and the data model is `googleGeocode`. Should we be using `googleGeocode` or `googlePlaceId`? Or either one should work?
+3. **Footnotes in `Airport` Model**: The `Airport` section includes footnotes ("*Either googlePlaceId OR city must be provided*") that seem to belong to the `Address` model. This seems like a copy-paste error.
+4. **`EditableReservation.creditCard` Requirement**: The `EditableReservation` model marks the `creditCard` field as required, but the example request for the "Edit Reservation" endpoint does not include it. Is this field conditionally required, or is the example/model incorrect? I assumed its optional here.
+5. **`Get Prices.rateType` Meanings**: The descriptions for `rateType` values `0` and `1` are blank. In another part of the documentation, they are described as 0-5 -> `0`: P2P, `1`: Hourly, `2`: Daily, `3`: Tour, `4`: Round Trip, `5`: RT Half. I assumed this is also true where the documentation omitted it. Can you confirm? Meaning, can the `/price/` endpoint also accept 2-5 even though its undocumented?
