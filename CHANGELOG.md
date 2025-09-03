@@ -26,3 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation with MkDocs
 
 ## [0.1.1] - 2025-09-02
+
+### Changed
+- Minor fixes
+
+## [0.1.2] - 2025-09-02
+
+### Changed
+- Minor fixes
+
+## [0.1.3] - 2025-09-02
+
+### Changed
+- Moved `BookALimoError` to a separate `exceptions.py` module.
+- Updated README.md.

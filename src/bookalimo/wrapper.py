@@ -8,7 +8,8 @@ from typing import Any, Optional
 
 from httpx import AsyncClient
 
-from ._client import BookALimoClient, BookALimoError
+from ._client import BookALimoClient
+from .exceptions import BookALimoError
 from .models import (
     Address,
     Airport,

@@ -5,13 +5,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-A modern, async Python wrapper for the Book-A-Limo API with full type support.
+A modern, async Python wrapper for the Book-A-Limo API with full type support. Built on top of `httpx` and `pydantic`.
 
 ## Features
 
-* **Async/await** (built on `httpx`)
-* **Typed Pydantic models** for requests & responses
-* **Input validation**
+* **Asynchronous**
+* **Fully Typed** for requests & responses
+* **Input validation** including airports and addresses.
 * **Clean, minimal interface** for each API operation
 * **Custom exceptions & error handling**
 * **Tests and examples**
@@ -46,24 +46,23 @@ async def main():
     # For Travel Agents (customers: pass is_customer=True)
     credentials = create_credentials("TA10007", "your_password")
 
-    async with AsyncClient() as http_client:
-        async with BookALimo(credentials, http_client=http_client) as client:
-            # Build locations
-            pickup = create_airport_location("JFK", "New York")
-            dropoff = create_address_location("53 East 34th Street, Manhattan")
+    async with BookALimo(credentials) as client:
+        # Build locations
+        pickup = create_airport_location("JFK", "New York")
+        dropoff = create_address_location("53 East 34th Street, Manhattan")
 
-            prices = await client.get_prices(
-                rate_type=RateType.P2P,
-                date_time="09/05/2025 12:44 AM",
-                pickup=pickup,
-                dropoff=dropoff,
-                passengers=2,
-                luggage=3,
-            )
+        prices = await client.get_prices(
+            rate_type=RateType.P2P,
+            date_time="09/05/2025 12:44 AM",
+            pickup=pickup,
+            dropoff=dropoff,
+            passengers=2,
+            luggage=3,
+        )
 
-            print(f"Available cars: {len(prices.prices)}")
-            for price in prices.prices:
-                print(f"- {price.car_description}: ${price.price}")
+        print(f"Available cars: {len(prices.prices)}")
+        for price in prices.prices:
+            print(f"- {price.car_description}: ${price.price}")
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -183,7 +182,7 @@ stops = [
 ### Using Account Info (Travel Agents)
 
 ```python
-from bookalimo.models import Account  # models (not re-exported at top-level)
+from bookalimo.models import Account
 
 account = Account(
     id="TA10007",
@@ -221,7 +220,7 @@ cancel_result = await client.edit_reservation(
 ## Error Handling
 
 ```python
-from bookalimo._client import BookALimoError  # currently defined here
+from bookalimo.exceptions import BookALimoError
 
 try:
     reservations = await client.list_reservations()

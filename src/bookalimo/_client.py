@@ -10,6 +10,7 @@ from typing import Any, Optional, cast
 import httpx
 from pydantic import BaseModel
 
+from .exceptions import BookALimoError
 from .models import (
     BookRequest,
     BookResponse,
@@ -35,20 +36,6 @@ def get_version() -> str:
     from bookalimo import __version__
 
     return __version__
-
-
-class BookALimoError(Exception):
-    """Base exception for Book-A-Limo API errors."""
-
-    def __init__(
-        self,
-        message: str,
-        status_code: Optional[int] = None,
-        response_data: Optional[dict[str, Any]] = None,
-    ):
-        super().__init__(message)
-        self.status_code = status_code
-        self.response_data = response_data or {}
 
 
 class BookALimoClient:

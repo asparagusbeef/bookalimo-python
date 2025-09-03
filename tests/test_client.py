@@ -4,7 +4,8 @@ import httpx
 import pytest
 import respx
 
-from bookalimo._client import BookALimoClient, BookALimoError
+from bookalimo._client import BookALimoClient
+from bookalimo.exceptions import BookALimoError
 from bookalimo.models import ListReservationsResponse
 
 
