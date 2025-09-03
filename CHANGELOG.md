@@ -40,3 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Moved `BookALimoError` to a separate `exceptions.py` module.
 - Updated README.md.
+
+## [0.1.4] - 2025-09-02
+
+### Added
+- logging handling + documentation
+
+### Changed
+- Fix typo in base_url
