@@ -27,12 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2025-09-02
 
-### Changed
+### Fixed
 - Minor fixes
 
 ## [0.1.2] - 2025-09-02
 
-### Changed
+### Fixed
 - Minor fixes
 
 ## [0.1.3] - 2025-09-02
@@ -46,5 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - logging handling + documentation
 
-### Changed
+### Fixed
 - Fix typo in base_url
+
+## [0.1.5] - 2025-09-04
+
+### Fixed
+- Fix type hints for logging decorator
