@@ -8,9 +8,15 @@ from __future__ import annotations
 import logging
 import os
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Awaitable, Iterable, Mapping
+from functools import wraps
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
+
+from typing_extensions import ParamSpec
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 logger = logging.getLogger("bookalimo")
 logger.addHandler(logging.NullHandler())
@@ -178,27 +184,19 @@ def log_call(
     include_params: Iterable[str] | None = None,
     transforms: Mapping[str, Callable[[Any], Any]] | None = None,
     operation: str | None = None,
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """
-    Decorator for async SDK methods.
-    - DEBUG: logs start/end with sanitized params + duration
-    - WARNING: logs errors (sanitized). No overhead when DEBUG is off.
-    """
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     include = set(include_params or [])
     transforms = transforms or {}
 
-    def _decorate(fn: Callable[..., Any]) -> Callable[..., Any]:
-        async def _async_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+    def _decorate(fn: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        @wraps(fn)
+        async def _async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
             log = get_logger("wrapper")
             op = operation or fn.__name__
 
-            # Fast path: if debug disabled, skip param binding/redaction entirely
             debug_on = log.isEnabledFor(logging.DEBUG)
             if debug_on:
-                # Build a minimal, sanitized args snapshot
                 snapshot: dict[str, Any] = {}
-                # Map positional args to param names without inspect overhead by relying on kwargs only:
-                # we assume call sites are using kwargs in the wrapper (they do).
                 for k in include:
                     val = kwargs.get(k, None)
                     if k in transforms:
@@ -209,7 +207,6 @@ def log_call(
                     else:
                         val = redact_param(k, val)
                     snapshot[k] = val
-
                 start = perf_counter()
                 log.debug(
                     "→ %s(%s)",
@@ -219,21 +216,18 @@ def log_call(
                 )
 
             try:
-                result = await fn(self, *args, **kwargs)
+                result = await fn(*args, **kwargs)
                 if debug_on:
                     dur_ms = (perf_counter() - start) * 1000.0
-                    # Keep result logging ultra-light
-                    result_type = type(result).__name__
                     log.debug(
                         "← %s ok in %.1f ms (%s)",
                         op,
                         dur_ms,
-                        result_type,
+                        type(result).__name__,
                         extra={"operation": op},
                     )
                 return result
             except Exception as e:
-                # WARNING with sanitized error; no param dump on failures
                 log.warning(
                     "%s failed: %s", op, e.__class__.__name__, extra={"operation": op}
                 )
