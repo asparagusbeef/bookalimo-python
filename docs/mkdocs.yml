@@ -1,7 +1,7 @@
 site_name: Bookalimo Python SDK
 site_url: https://asparagusbeef.github.io/bookalimo-python
 site_description: Python client library for the Book-A-Limo transportation booking API
-
+docs_dir: .
 repo_name: asparagusbeef/bookalimo-python
 repo_url: https://github.com/asparagusbeef/bookalimo-python
 
