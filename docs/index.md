@@ -10,7 +10,7 @@ Python client library for the Book-A-Limo transportation booking API.
 
 - **Async & Sync Support**: Choose the right client for your application
 - **Type Safety**: Full Pydantic models with validation
-- **Google Places Integration**: Location search and geocoding  
+- **Google Places Integration**: Location search and geocoding
 - **Comprehensive Error Handling**: Detailed exceptions with context
 - **Automatic Retry**: Built-in exponential backoff for resilience
 - **Resource Management**: Context managers for proper cleanup
@@ -41,7 +41,7 @@ async def book_ride():
         password="your_password",
         is_customer=False  # False for agencies, True for customers
     )
-    
+
     # Define locations
     pickup = Location(
         type=LocationType.ADDRESS,
@@ -50,15 +50,15 @@ async def book_ride():
             city=City(city_name="New York", country_code="US", state_code="NY")
         )
     )
-    
+
     dropoff = Location(
         type=LocationType.ADDRESS,
         address=Address(
-            place_name="JFK Airport", 
+            place_name="JFK Airport",
             city=City(city_name="New York", country_code="US", state_code="NY")
         )
     )
-    
+
     # Book transportation
     async with AsyncBookalimo(credentials=credentials) as client:
         # Get pricing
@@ -70,13 +70,13 @@ async def book_ride():
             passengers=2,
             luggage=2
         )
-        
+
         # Book reservation
         booking = await client.reservations.book(
             token=quote.token,
             method="charge"  # or credit_card=CreditCard(...)
         )
-        
+
         return booking.reservation_id
 
 # Run the booking
@@ -94,7 +94,7 @@ async with AsyncBookalimo(
     # Search for locations
     pickup_results = await client.places.search("JFK Airport")
     dropoff_results = await client.places.search("Empire State Building")
-    
+
     # Convert to booking locations and proceed with booking...
 ```
 
@@ -122,7 +122,7 @@ agency_creds = Credentials.create(
     is_customer=False
 )
 
-# Customer Account  
+# Customer Account
 customer_creds = Credentials.create(
     user_id="customer@email.com",
     password="password",
@@ -133,7 +133,7 @@ customer_creds = Credentials.create(
 ### Booking Flow
 
 1. **Get Pricing**: `client.pricing.quote()` - Get vehicle options and session token
-2. **Update Details**: `client.pricing.update_details()` - Optionally modify booking 
+2. **Update Details**: `client.pricing.update_details()` - Optionally modify booking
 3. **Book Reservation**: `client.reservations.book()` - Confirm and pay
 
 ### Error Handling
@@ -156,7 +156,7 @@ except BookalimoError as e:
 
 ### User Guides
 - **[Quick Start](guide/quickstart.md)** - Get started in 5 minutes
-- **[Authentication](guide/auth.md)** - Credential setup and security  
+- **[Authentication](guide/auth.md)** - Credential setup and security
 - **[Making Bookings](guide/bookings.md)** - Complete booking workflows
 - **[Google Places](guide/places.md)** - Location search integration
 - **[Error Handling](guide/errors.md)** - Robust error management
@@ -184,7 +184,7 @@ except BookalimoError as e:
 
 ```bash
 export BOOKALIMO_USER_ID="your_agency_id"
-export BOOKALIMO_PASSWORD="your_password"  
+export BOOKALIMO_PASSWORD="your_password"
 export BOOKALIMO_IS_CUSTOMER="false"
 export GOOGLE_PLACES_API_KEY="your_google_places_key"
 ```
@@ -194,7 +194,7 @@ export GOOGLE_PLACES_API_KEY="your_google_places_key"
 - **GitHub**: [asparagusbeef/bookalimo-python](https://github.com/asparagusbeef/bookalimo-python)
 - **PyPI**: [bookalimo](https://pypi.org/project/bookalimo/)
 - **Issues**: [GitHub Issues](https://github.com/asparagusbeef/bookalimo-python/issues)
-- **Changelog**: [CHANGELOG.md](changelog.md)
+- **Changelog**: [CHANGELOG.md](../CHANGELOG.md)
 
 ## License
 
