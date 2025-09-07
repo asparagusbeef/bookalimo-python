@@ -46,6 +46,7 @@ jobs:
     - name: Run tests
       env:
         GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
       run: |
         pytest -v --cov=bookalimo --cov-report=xml --cov-report=html --cov-report=term-missing
     
@@ -98,10 +99,16 @@ jobs:
         pip install -e ".[dev,test,places]"
     
     - name: Run performance tests
+      env:
+        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
       run: |
         pytest -v -m "performance" --durations=10
     
     - name: Run slow integration tests
+      env:
+        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
       run: |
         pytest -v -m "slow" --durations=10
 

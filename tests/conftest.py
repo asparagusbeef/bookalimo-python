@@ -60,6 +60,33 @@ def invalid_credentials() -> Credentials:
 
 
 @pytest.fixture
+def real_bookalimo_credentials() -> Optional[Credentials]:
+    """Real Bookalimo testing credentials from CI environment."""
+    testing_user_json = os.getenv("BOOKALIMO_TESTING_USER")
+    if not testing_user_json:
+        return None
+    
+    try:
+        import json
+        user_data = json.loads(testing_user_json)
+        return Credentials.create(
+            user_id=user_data["id"],
+            password=user_data["password"],
+            is_customer=user_data.get("is_customer", "false").lower() == "true"
+        )
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        pytest.fail(f"Invalid BOOKALIMO_TESTING_USER format: {e}")
+
+
+@pytest.fixture
+def skip_if_no_real_credentials(real_bookalimo_credentials):
+    """Skip test if real Bookalimo credentials are not available."""
+    if real_bookalimo_credentials is None:
+        pytest.skip("Real Bookalimo credentials not available (BOOKALIMO_TESTING_USER not set)")
+    return real_bookalimo_credentials
+
+
+@pytest.fixture
 def sample_pickup_location() -> Location:
     """Sample pickup location for testing."""
     return Location(
@@ -232,14 +259,21 @@ def setup_env_vars():
     """Set up environment variables for testing."""
     original_env = os.environ.copy()
     
-    # Set test environment variables
-    os.environ["GOOGLE_PLACES_API_KEY"] = MOCK_API_KEY
+    # Set test environment variables (only if not already set)
+    if "GOOGLE_PLACES_API_KEY" not in os.environ:
+        os.environ["GOOGLE_PLACES_API_KEY"] = MOCK_API_KEY
     
     yield
     
-    # Restore original environment
+    # Restore original environment (but preserve CI secrets)
+    ci_secrets = {
+        key: value for key, value in os.environ.items() 
+        if key in ["GOOGLE_PLACES_API_KEY", "BOOKALIMO_TESTING_USER"]
+        and key in original_env
+    }
     os.environ.clear()
     os.environ.update(original_env)
+    os.environ.update(ci_secrets)
 
 
 @pytest.fixture

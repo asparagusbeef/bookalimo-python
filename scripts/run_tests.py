@@ -51,12 +51,18 @@ def setup_environment():
     else:
         test_env['GOOGLE_PLACES_API_KEY'] = 'test-google-places-key'
     
+    # Add Bookalimo testing credentials if available
+    if 'BOOKALIMO_TESTING_USER' in os.environ:
+        test_env['BOOKALIMO_TESTING_USER'] = os.environ['BOOKALIMO_TESTING_USER']
+    
     # Update environment
     os.environ.update(test_env)
     
     print("🔧 Test environment configured")
     for key, value in test_env.items():
         if 'KEY' in key and value != 'test-google-places-key':
+            print(f"   {key}: ***REDACTED***")
+        elif 'BOOKALIMO_TESTING_USER' in key:
             print(f"   {key}: ***REDACTED***")
         else:
             print(f"   {key}: {value}")

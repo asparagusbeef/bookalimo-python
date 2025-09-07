@@ -19,6 +19,7 @@ tests/
 ├── test_exceptions.py         # Exception handling and error scenarios
 ├── test_performance.py        # Performance and load testing
 ├── test_integration.py        # End-to-end integration scenarios
+├── test_real_api_integration.py # Live API testing with real credentials
 └── test_config.py            # Configuration and environment tests
 ```
 
@@ -142,7 +143,25 @@ tests/
   - Places integration workflows
   - Error propagation through layers
 
-### 9. Configuration Testing (`test_config.py`)
+### 9. Real API Integration Testing (`test_real_api_integration.py`)
+- **Live API Testing**
+  - Real pricing quotes with actual Bookalimo API
+  - Reservation listing and management
+  - Authentication validation against live service
+- **Performance Validation**
+  - Response time monitoring
+  - Concurrent request handling
+  - Rate limiting behavior
+- **Error Scenario Testing**
+  - Invalid request handling
+  - Timeout and connection management
+  - Authentication failure modes
+- **Credential Management**
+  - JSON credential parsing from environment
+  - Automatic test skipping when credentials unavailable
+  - Secure credential handling in CI
+
+### 10. Configuration Testing (`test_config.py`)
 - **Default Values**
   - URL and endpoint validation
   - Timeout configuration
@@ -187,11 +206,16 @@ tests/
   - Full test suite with Places integration
   - Core tests without optional dependencies
   - Performance testing on main branch
+  - Real API integration tests with live credentials
 - **Quality Gates**
   - Linting (ruff)
   - Type checking (mypy)
   - Security scanning (bandit, safety)
   - Coverage reporting (codecov)
+- **CI Secrets Configuration**
+  - `GOOGLE_PLACES_API_KEY`: For Places API integration tests
+  - `BOOKALIMO_TESTING_USER`: JSON credentials for live API testing
+  - Automatic test skipping when secrets unavailable
 
 ### Local Development Tools
 
@@ -336,6 +360,9 @@ make validate
 # Required for Google Places tests
 export GOOGLE_PLACES_API_KEY="your-api-key"
 
+# Required for real API integration tests
+export BOOKALIMO_TESTING_USER='{"id": "your_user_id", "password": "your_password", "is_customer": "false"}'
+
 # Optional test configuration
 export BOOKALIMO_TEST_MODE="1"
 ```
@@ -352,6 +379,10 @@ pytest -m performance -v         # Performance only
 
 # Coverage reporting
 pytest --cov=bookalimo --cov-report=html
+
+# Real API integration tests
+pytest tests/test_real_api_integration.py -v  # Requires BOOKALIMO_TESTING_USER
+make test-real-api                           # Convenient make target
 
 # Parallel execution
 pytest -n auto                   # Requires pytest-xdist

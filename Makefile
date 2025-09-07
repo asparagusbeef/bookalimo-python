@@ -20,6 +20,7 @@ help:
 	@echo "  test-integration  Run integration tests only"
 	@echo "  test-performance  Run performance tests only"
 	@echo "  test-noplaces  Run tests without Google Places integration"
+	@echo "  test-real-api  Run real API integration tests (requires credentials)"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  lint           Run linting checks"
@@ -73,6 +74,9 @@ test-performance:
 
 test-noplaces:
 	pytest -v tests/ -k "not test_google_places and not places" --cov=bookalimo
+
+test-real-api:
+	pytest -v tests/test_real_api_integration.py -m "integration and network"
 
 # Code quality targets
 lint:
