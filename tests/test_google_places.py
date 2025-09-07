@@ -1,31 +1,59 @@
 """Tests for Google Places integration."""
 
 import os
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest
-from google.api_core import exceptions as gexc
 
 from bookalimo.exceptions import BookalimoError
-from bookalimo.integrations.google_places.client_async import AsyncGooglePlaces
-from bookalimo.integrations.google_places.client_sync import GooglePlaces
-from bookalimo.integrations.google_places.common import (
-    DEFAULT_PLACE_FIELDS,
-    fmt_exc,
-    mask_header,
-)
-from bookalimo.schemas.places import google as models
-from bookalimo.schemas.places.common import LatLng
-from bookalimo.schemas.places.place import Place as GooglePlace
 
 # Skip all tests if Google Places integration is not available
 try:
+    from google.api_core import exceptions as gexc
     from google.maps.places_v1 import PlacesClient
+
+    from bookalimo.integrations.google_places.client_async import AsyncGooglePlaces
+    from bookalimo.integrations.google_places.client_sync import GooglePlaces
+    from bookalimo.integrations.google_places.common import (
+        DEFAULT_PLACE_FIELDS,
+        fmt_exc,
+        mask_header,
+    )
+    from bookalimo.schemas.places import google as models
+    from bookalimo.schemas.places.common import LatLng
+    from bookalimo.schemas.places.place import Place as GooglePlace
 
     PLACES_AVAILABLE = True
 except ImportError:
     PLACES_AVAILABLE = False
+    # Create dummy objects for type hints when Google Places is not available
+    if TYPE_CHECKING:
+        from google.api_core import exceptions as gexc
+        from google.maps.places_v1 import PlacesClient
+
+        from bookalimo.integrations.google_places.client_async import AsyncGooglePlaces
+        from bookalimo.integrations.google_places.client_sync import GooglePlaces
+        from bookalimo.integrations.google_places.common import (
+            DEFAULT_PLACE_FIELDS,
+            fmt_exc,
+            mask_header,
+        )
+        from bookalimo.schemas.places import google as models
+        from bookalimo.schemas.places.common import LatLng
+        from bookalimo.schemas.places.place import Place as GooglePlace
+    else:
+        gexc = None
+        PlacesClient = None
+        AsyncGooglePlaces = None
+        GooglePlaces = None
+        DEFAULT_PLACE_FIELDS = None
+        fmt_exc = None
+        mask_header = None
+        models = None
+        LatLng = None
+        GooglePlace = None
 
 pytestmark = pytest.mark.skipif(
     not PLACES_AVAILABLE, reason="Google Places integration not available"
