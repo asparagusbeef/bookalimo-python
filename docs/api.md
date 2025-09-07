@@ -30,7 +30,7 @@ This document provides a comprehensive overview of the Book-A-Limo API, detailin
     - [Reservation](#reservation)
     - [Reward](#reward)
     - [Stop](#stop)
-  - [Questions for the API Author (Ivan)](#questions-for-the-api-author-ivan)
+  - [Questions for the API Author](#questions-for-the-api-author)
 
 ---
 
@@ -609,7 +609,7 @@ Cancellation is a part of the Edit function. Set `isCancelRequest` to `true`.
 
 ---
 
-## Questions for the API Author (Ivan)
+## Questions for the API Author
 
 Based on the initial documentation, the following points have inconsistencies or lack clarity. Could you please clarify them?
 

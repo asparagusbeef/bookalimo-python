@@ -6,17 +6,16 @@ from typing import TYPE_CHECKING
 import httpx
 import pytest
 
-from bookalimo import create_credentials
-from bookalimo.models import Credentials
+from bookalimo.transport.auth import Credentials
 
 if TYPE_CHECKING:
-    from bookalimo._client import BookALimoClient
+    from bookalimo.transport.httpx_async import AsyncTransport
 
 
 @pytest.fixture
 def credentials() -> Credentials:
     """Test credentials."""
-    return create_credentials("TEST_USER", "test_password")
+    return Credentials(id="TEST_USER", password_hash="test_password", is_customer=False)
 
 
 @pytest.fixture
@@ -32,10 +31,12 @@ async def http_client() -> AsyncGenerator[httpx.AsyncClient, None]:
 @pytest.fixture
 async def mock_client(
     http_client: httpx.AsyncClient, credentials: Credentials
-) -> "BookALimoClient":
+) -> "AsyncTransport":
     """Mock client for testing."""
-    from bookalimo._client import BookALimoClient
+    from bookalimo.transport.httpx_async import AsyncTransport
 
-    return BookALimoClient(
-        http_client, credentials, base_url="https://sandbox.bookalimo.com"
+    return AsyncTransport(
+        client=http_client,
+        credentials=credentials,
+        base_url="https://sandbox.bookalimo.com",
     )

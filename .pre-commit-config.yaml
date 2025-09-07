@@ -27,5 +27,6 @@ repos:
           pycountry>=22.0.0,
           us>=3.0.0,
           airportsdata>=20230101,
+          types-protobuf>=6.0.0,
         ]
         args: [--strict, --ignore-missing-imports]

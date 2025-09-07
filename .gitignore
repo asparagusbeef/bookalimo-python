@@ -1,5 +1,7 @@
 # Custom
 codebase.md
+.aidigestignore
+.aidigestminify
 api.md
 
 # Byte-compiled / optimized / DLL files

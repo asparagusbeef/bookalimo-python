@@ -1,31 +1,24 @@
 """
-Book-A-Limo API Wrapper Package.
-Provides a clean, typed interface to the Book-A-Limo API.
+Bookalimo SDK - Python client for the Book-A-Limo API.
+
+Provides clean, typed interfaces for booking transportation services.
 """
 
-import importlib.metadata
-
-from ._logging import disable_debug_logging, enable_debug_logging
-from .wrapper import (
-    BookALimo,
-    create_address_location,
-    create_airport_location,
-    create_credentials,
-    create_credit_card,
-    create_passenger,
-    create_stop,
+from ._version import __version__
+from .client import AsyncBookalimo, Bookalimo
+from .exceptions import (
+    BookalimoError,
+    BookalimoHTTPError,
+    BookalimoTimeout,
+    BookalimoValidationError,
 )
 
 __all__ = [
-    "BookALimo",
-    "create_credentials",
-    "create_address_location",
-    "create_airport_location",
-    "create_stop",
-    "create_passenger",
-    "create_credit_card",
-    "enable_debug_logging",
-    "disable_debug_logging",
+    "Bookalimo",
+    "AsyncBookalimo",
+    "BookalimoError",
+    "BookalimoHTTPError",
+    "BookalimoTimeout",
+    "BookalimoValidationError",
+    "__version__",
 ]
-
-__version__ = importlib.metadata.version(__package__ or __name__)

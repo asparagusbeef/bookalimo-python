@@ -1,6 +1,15 @@
 """
-Logging configuration for bookalimo package.
-Public SDK-style logging with built-in redaction helpers.
+Logging utilities for the Bookalimo SDK.
+
+The SDK uses Python's standard logging module. To enable debug logging,
+configure the 'bookalimo' logger or set the BOOKALIMO_LOG_LEVEL environment variable.
+
+Example:
+    import logging
+    logging.getLogger('bookalimo').setLevel(logging.DEBUG)
+
+    # Or via environment variable
+    export BOOKALIMO_LOG_LEVEL=DEBUG
 """
 
 from __future__ import annotations
@@ -18,9 +27,41 @@ from typing_extensions import ParamSpec
 P = ParamSpec("P")
 R = TypeVar("R")
 
+
+def _level_from_env() -> int | None:
+    """Get log level from BOOKALIMO_LOG_LEVEL environment variable."""
+    lvl = os.getenv("BOOKALIMO_LOG_LEVEL")
+    if not lvl:
+        return None
+    try:
+        return int(lvl)
+    except ValueError:
+        try:
+            return logging._nameToLevel.get(lvl.upper(), None)
+        except Exception:
+            return None
+
+
 logger = logging.getLogger("bookalimo")
-logger.addHandler(logging.NullHandler())
-logger.setLevel(logging.WARNING)
+
+# Apply environment variable level if set, otherwise use WARNING as default
+env_level = _level_from_env()
+logger.setLevel(env_level if env_level is not None else logging.WARNING)
+
+# If user set BOOKALIMO_LOG_LEVEL, they expect to see logs - add console handler
+if env_level is not None:
+    # Only add console handler if one doesn't already exist
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(env_level)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+else:
+    # If no env var is set, use NullHandler (library default behavior)
+    logger.addHandler(logging.NullHandler())
 
 REDACTED = "******"
 
@@ -136,44 +177,6 @@ def get_logger(name: str | None = None) -> logging.Logger:
     if name:
         return logging.getLogger(f"bookalimo.{name}")
     return logger
-
-
-def enable_debug_logging(level: int | None = None) -> None:
-    level = level or _level_from_env() or logging.DEBUG
-    logger.setLevel(level)
-
-    has_real_handler = any(
-        not isinstance(h, logging.NullHandler) for h in logger.handlers
-    )
-    if not has_real_handler:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    logger.info("bookalimo logging enabled at %s", logging.getLevelName(logger.level))
-
-
-def disable_debug_logging() -> None:
-    logger.setLevel(logging.WARNING)
-    for handler in logger.handlers[:]:
-        if not isinstance(handler, logging.NullHandler):
-            logger.removeHandler(handler)
-
-
-def _level_from_env() -> int | None:
-    lvl = os.getenv("BOOKALIMO_LOG_LEVEL")
-    if not lvl:
-        return None
-    try:
-        return int(lvl)
-    except ValueError:
-        try:
-            return logging._nameToLevel.get(lvl.upper(), None)
-        except Exception:
-            return None
 
 
 # ---- decorator for async methods --------------------------------------------
