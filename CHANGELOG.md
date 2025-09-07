@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clean import structure with minimal `__init__` exports
 
 ### Removed
-- Old `BookALimo` wrapper class (replaced with `AsyncBookalimo`)
+- Old `BookALimo` wrapper class (replaced with `AsyncBookalimo` and `Bookalimo`)
 - Factory helper methods (`create_address_location`, etc.) - use models directly
 - Authenticated model duplicates (simplified credential injection)
 - `enable_debug_logging`/`disable_debug_logging` functions
@@ -57,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.3] - 2025-09-02
 
 ### Changed
-- Moved `BookALimoError` to a separate `exceptions.py` module.
+- Moved `BookalimoError` to a separate `exceptions.py` module.
 - Updated README.md.
 
 ## [0.1.4] - 2025-09-02
@@ -77,8 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Google Places integration: `GooglePlacesClient`, `Place`, `PlaceType`, `create_location_from_places`, `autocomplete_locations`.
-- `BookALimoValidationError` for aggregated, field-level validation errors.
-- Logging improvements and `get_logger()` export; optional `http_timeout` on `BookALimo`.
+- `BookalimoValidationError` for aggregated, field-level validation errors.
+- Logging improvements and `get_logger()` export; optional `http_timeout` on `Bookalimo`.
 - Dev tooling updates: add `build`, `twine`, `python-dotenv`.
 
 ### Changed
