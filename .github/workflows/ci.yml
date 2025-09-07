@@ -89,6 +89,7 @@ jobs:
             mkdocs-material \
             "mkdocstrings[python]" \
             mkdocs-autorefs
+            ruff
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force -f ./docs/mkdocs.yml
