@@ -38,7 +38,7 @@ def calculate_backoff(attempt: int, base_backoff: float) -> float:
     # Exponential backoff: base * (2 ^ attempt)
     backoff = base_backoff * (2**attempt)
     # Add jitter: ±25% randomization
-    jitter = backoff * 0.25 * (random.random() * 2 - 1)
+    jitter = backoff * 0.25 * (random.random() * 2 - 1)  # nosec B311: non-crypto jitter
     return float(max(0.1, backoff + jitter))  # Minimum 100ms
 
 
@@ -64,9 +64,10 @@ async def async_retry(
             await asyncio.sleep(wait_time)
             attempt += 1
 
-    # Re-raise the last exception
-    assert last_exc is not None
-    raise last_exc
+    if last_exc is not None:
+        raise last_exc
+    else:
+        raise RuntimeError("Last exception is None")
 
 
 def sync_retry(
@@ -94,5 +95,8 @@ def sync_retry(
             attempt += 1
 
     # Re-raise the last exception
-    assert last_exc is not None
+    if last_exc is not None:
+        raise last_exc
+    else:
+        raise RuntimeError("Last exception is None")
     raise last_exc
