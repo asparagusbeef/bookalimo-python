@@ -154,7 +154,6 @@ class LocationRestriction(BaseModel):
 class Place(BaseModel):
     """Structured place result from the Google Places API."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     formatted_address: str = Field(..., description="Full formatted address")
     lat: float = Field(..., description="Latitude")
     lng: float = Field(..., description="Longitude")

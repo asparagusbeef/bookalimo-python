@@ -2,7 +2,7 @@
 
 import logging
 from time import perf_counter
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, Union, overload
 from uuid import uuid4
 
 import httpx
@@ -19,11 +19,13 @@ from ..exceptions import (
     BookalimoConnectionError,
     BookalimoError,
     BookalimoHTTPError,
+    BookalimoRequestError,
     BookalimoTimeout,
 )
 from .auth import Credentials, inject_credentials
 from .base import BaseTransport
 from .retry import should_retry_exception, should_retry_status, sync_retry
+from .utils import handle_api_errors, handle_http_error
 
 logger = logging.getLogger("bookalimo.transport")
 
@@ -64,7 +66,14 @@ class SyncTransport(BaseTransport):
                 user_agent,
             )
 
-    def post(self, path: str, model: BaseModel, response_model: type[T]) -> T:
+    @overload
+    def post(self, path: str, model: BaseModel) -> Any: ...
+    @overload
+    def post(self, path: str, model: BaseModel, response_model: type[T]) -> T: ...
+
+    def post(
+        self, path: str, model: BaseModel, response_model: Optional[type[T]] = None
+    ) -> Union[T, Any]:
         """Make a POST request and return parsed response."""
         # Prepare URL
         path = path if path.startswith("/") else f"/{path}"
@@ -103,7 +112,7 @@ class SyncTransport(BaseTransport):
 
             # Handle HTTP errors
             if response.status_code >= 400:
-                self._handle_http_error(response, req_id, path)
+                handle_http_error(response, req_id, path)
 
             # Parse JSON
             try:
@@ -119,7 +128,7 @@ class SyncTransport(BaseTransport):
                 ) from e
 
             # Handle API-level errors
-            self._handle_api_errors(json_data, req_id, path)
+            handle_api_errors(json_data, req_id, path)
 
             # Debug logging for success
             if logger.isEnabledFor(logging.DEBUG):
@@ -141,7 +150,11 @@ class SyncTransport(BaseTransport):
                 )
 
             # Parse and return response
-            return response_model.model_validate(json_data)
+            return (
+                response_model.model_validate(json_data)
+                if response_model
+                else json_data
+            )
 
         except httpx.TimeoutException:
             if logger.isEnabledFor(logging.DEBUG):
@@ -154,8 +167,17 @@ class SyncTransport(BaseTransport):
             raise BookalimoConnectionError(
                 "Connection error - unable to reach Book-A-Limo API"
             ) from None
+        except httpx.RequestError as e:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.warning(
+                    "× [%s] %s request error: %s",
+                    req_id or "-",
+                    path,
+                    e.__class__.__name__,
+                )
+            raise BookalimoRequestError(f"Request Error: {e}") from e
 
-        except httpx.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.warning(
                     "× [%s] %s HTTP error: %s",
@@ -182,56 +204,15 @@ class SyncTransport(BaseTransport):
 
     def _make_request(self, url: str, data: dict[str, Any]) -> httpx.Response:
         """Make the actual HTTP request."""
-        return self.client.post(url, json=data, headers=self.headers)
-
-    def _handle_http_error(
-        self, response: httpx.Response, req_id: Optional[str], path: str
-    ) -> None:
-        """Handle HTTP status errors."""
-        status = response.status_code
-
-        if status == 408:
-            raise BookalimoTimeout(f"HTTP {status}: Request timeout")
-        elif status in (502, 503, 504):
-            raise BookalimoHTTPError(
-                f"HTTP {status}: Service unavailable", status_code=status
+        resp = self.client.post(url, json=data, headers=self.headers)
+        if should_retry_status(resp.status_code):
+            # Construct an HTTPStatusError so sync_retry can catch & decide.
+            raise httpx.HTTPStatusError(
+                message=f"Retryable HTTP status: {resp.status_code}",
+                request=resp.request,
+                response=resp,
             )
-
-        # Try to parse error payload
-        try:
-            payload = response.json()
-        except Exception as e:
-            text_preview = (
-                (response.text or "")[:256] if hasattr(response, "text") else ""
-            )
-            raise BookalimoHTTPError(
-                f"HTTP {status}: {text_preview}",
-                status_code=status,
-            ) from e
-
-        raise BookalimoHTTPError(
-            f"HTTP {status}",
-            status_code=status,
-            payload=payload if isinstance(payload, dict) else {"raw": payload},
-        )
-
-    def _handle_api_errors(
-        self, json_data: Any, req_id: Optional[str], path: str
-    ) -> None:
-        """Handle API-level errors in the response."""
-        if not isinstance(json_data, dict):
-            return
-
-        if json_data.get("error"):
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.warning("× [%s] %s API error", req_id or "-", path)
-            raise BookalimoError(f"API Error: {json_data['error']}")
-
-        if "success" in json_data and not json_data["success"]:
-            msg = json_data.get("error", "Unknown API error")
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.warning("× [%s] %s API error", req_id or "-", path)
-            raise BookalimoError(f"API Error: {msg}")
+        return resp
 
     def close(self) -> None:
         """Close the HTTP client if we own it."""

@@ -47,7 +47,7 @@ class ExternalModel(BaseModel):
     model_config = ConfigDict(extra="allow")
 
 
-class LocalizedText(ExternalModel): ...
+class OpeningHours(ExternalModel): ...
 
 
 class PostalAddress(ExternalModel): ...
@@ -83,9 +83,6 @@ class AddressDescriptor(ExternalModel): ...
 class PriceRange(ExternalModel): ...
 
 
-class OpeningHours(ExternalModel): ...
-
-
 # ---------- Geometry ----------
 class LatLng(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -105,13 +102,13 @@ class LatLng(BaseModel):
 class Viewport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    northeast: LatLng
-    southwest: LatLng
+    high: LatLng
+    low: LatLng
 
     @model_validator(mode="after")
     def _lat_order(self) -> Self:
-        if self.northeast.latitude < self.southwest.latitude:
-            raise ValueError("northeast.latitude must be >= southwest.latitude")
+        if self.high.latitude < self.low.latitude:
+            raise ValueError("high.latitude must be >= low.latitude")
         return self
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from os import getenv
 from typing import Any, Optional, TypeVar, cast
@@ -13,13 +14,52 @@ from typing_extensions import ParamSpec
 from ...exceptions import BookalimoError
 from ...logging import get_logger
 from ...schemas.places import google as models
-from .common import DEFAULT_PLACE_FIELDS, fmt_exc, mask_header
+from ...schemas.places.place import Place as GooglePlace
+from .common import (
+    ADDRESS_TYPES,
+    DEFAULT_PLACE_FIELDS,
+    DEFAULT_PLACE_LIST_FIELDS,
+    PlaceListFields,
+    fmt_exc,
+    mask_header,
+)
 from .proto_adapter import validate_proto_to_model
 
 logger = get_logger("places")
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+def _strip_html(s: str) -> str:
+    # Simple fallback for adr_format_address (which is HTML)
+    return re.sub(r"<[^>]+>", "", s) if s else s
+
+
+def _infer_place_type(m: GooglePlace) -> str:
+    # 1) Airport wins outright
+    tset = set(m.types or [])
+    ptype = (m.primary_type or "").lower() if getattr(m, "primary_type", None) else ""
+    if "airport" in tset or ptype == "airport":
+        return "airport"
+    # 2) Anything that looks like a geocoded address
+    if tset & ADDRESS_TYPES:
+        return "address"
+    # 3) Otherwise treat as a point of interest
+    return "poi"
+
+
+def _get_lat_lng(model: GooglePlace) -> tuple[float, float]:
+    if model.location:
+        lat = model.location.latitude
+        lng = model.location.longitude
+    elif model.viewport:
+        lat = model.viewport.low.latitude
+        lng = model.viewport.low.longitude
+    else:
+        lat = 0
+        lng = 0
+    return lat, lng
 
 
 class GooglePlaces:
@@ -111,7 +151,7 @@ class GooglePlaces:
         self,
         query: str,
         *,
-        fields: Sequence[str] | str = DEFAULT_PLACE_FIELDS,
+        fields: PlaceListFields = DEFAULT_PLACE_LIST_FIELDS,
         **kwargs: Any,
     ) -> list[models.Place]:
         """
@@ -120,7 +160,7 @@ class GooglePlaces:
             query: The text query to search for.
             **kwargs: Additional parameters for the Text Search API.
         Returns:
-            list[google.maps.places_v1.types.Place]
+            list[models.Place]
         Raises:
             BookalimoError: If the API request fails.
         """
@@ -130,9 +170,30 @@ class GooglePlaces:
                 request={"text_query": query, **kwargs},
                 metadata=metadata,
             )
-            return [
-                validate_proto_to_model(proto, models.Place) for proto in protos.places
+            pydantic_models = [
+                validate_proto_to_model(proto, GooglePlace) for proto in protos.places
             ]
+            place_models: list[models.Place] = []
+            for model in pydantic_models:
+                adr_format = getattr(model, "adr_format_address", None)
+                addr = (
+                    getattr(model, "formatted_address", None)
+                    or getattr(model, "short_formatted_address", None)
+                    or _strip_html(adr_format or "")
+                    or ""
+                )
+                lat, lng = _get_lat_lng(model)
+                place_models.append(
+                    models.Place(
+                        formatted_address=addr,
+                        lat=lat,
+                        lng=lng,
+                        place_type=_infer_place_type(model),
+                        iata_code=None,
+                        google_place=model,
+                    )
+                )
+            return place_models
         except gexc.InvalidArgument as e:
             # Often caused by missing/invalid field mask
             msg = f"Google Places Text Search invalid argument: {fmt_exc(e)}"
@@ -156,7 +217,7 @@ class GooglePlaces:
             place_id: The ID of the place to retrieve details for.
             **kwargs: Additional parameters for the Get Place API.
         Returns:
-            A `google.maps.places_v1.types.Place` object or `None` if not found.
+            A models.Place object or None if not found.
         Raises:
             BookalimoError: If the API request fails.
         """
@@ -166,7 +227,24 @@ class GooglePlaces:
                 request={"name": f"places/{place_id}", **kwargs},
                 metadata=metadata,
             )
-            return validate_proto_to_model(proto, models.Place)
+            # Convert proto to GooglePlace first, then process like search
+            model = validate_proto_to_model(proto, GooglePlace)
+            adr_format = getattr(model, "adr_format_address", None)
+            addr = (
+                getattr(model, "formatted_address", None)
+                or getattr(model, "short_formatted_address", None)
+                or _strip_html(adr_format or "")
+                or ""
+            )
+            lat, lng = _get_lat_lng(model)
+            return models.Place(
+                formatted_address=addr,
+                lat=lat,
+                lng=lng,
+                place_type=_infer_place_type(model),
+                iata_code=None,
+                google_place=model,
+            )
         except gexc.NotFound:
             return None
         except gexc.InvalidArgument as e:

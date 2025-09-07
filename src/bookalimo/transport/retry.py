@@ -21,7 +21,16 @@ def should_retry_status(
 
 def should_retry_exception(exc: Exception) -> bool:
     """Check if an exception should trigger a retry."""
-    return isinstance(exc, (httpx.TimeoutException, httpx.ConnectError))
+    return isinstance(
+        exc,
+        (
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.ReadTimeout,
+            httpx.ConnectError,
+            ConnectionError,
+        ),
+    )
 
 
 def calculate_backoff(attempt: int, base_backoff: float) -> float:

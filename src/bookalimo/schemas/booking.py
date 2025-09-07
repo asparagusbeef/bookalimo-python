@@ -287,7 +287,7 @@ class CreditCard(ApiModel):
     card_holder: str
     zip: Optional[str] = None
     holder_type: Optional[CardHolderType] = Field(
-        None,
+        default=None,
         description="Card holder type - API documentation unclear, using best guess",
     )
 

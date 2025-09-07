@@ -24,7 +24,7 @@ from .common import (
     EVChargeOptions,
     FuelOptions,
     LatLng,
-    LocalizedText,
+    OpeningHours,
     ParkingOptions,
     PaymentOptions,
     Photo,
@@ -36,7 +36,6 @@ from .common import (
     TimeZone,
     Viewport,
 )
-from .opening_hours import OpeningHours
 
 
 class PriceLevel(int):
@@ -115,6 +114,13 @@ class NeighborhoodSummary(BaseModel):
     disclosure_text: Optional[LocalizedText] = None
 
 
+class LocalizedText(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    text: str
+    language_code: str
+
+
 class ContainingPlace(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -143,7 +149,7 @@ class ContainingPlace(BaseModel):
 
 
 class Place(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="allow", str_strip_whitespace=True)
 
     # Identity
     name: Optional[str] = Field(default=None, description="places/{place_id}")
@@ -198,6 +204,7 @@ class Place(BaseModel):
     dine_in: Optional[bool] = None
     curbside_pickup: Optional[bool] = None
     reservable: Optional[bool] = None
+    editorial_summary: Optional[LocalizedText] = None
     serves_breakfast: Optional[bool] = None
     serves_lunch: Optional[bool] = None
     serves_dinner: Optional[bool] = None

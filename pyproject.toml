@@ -139,9 +139,12 @@ minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = ["ignore:Using google_geocode instead of city is recommended:UserWarning"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+    "network: marks tests as network tests",
+    "performance: marks tests as performance tests",
 ]
 
 # Coverage configuration
