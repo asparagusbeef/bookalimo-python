@@ -3,14 +3,12 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 from bookalimo.config import (
+    DEFAULT_BACKOFF,
     DEFAULT_BASE_URL,
+    DEFAULT_RETRIES,
     DEFAULT_TIMEOUTS,
     DEFAULT_USER_AGENT,
-    DEFAULT_RETRIES,
-    DEFAULT_BACKOFF,
 )
 
 
@@ -28,11 +26,11 @@ class TestDefaultConfiguration:
         """Test default timeouts configuration."""
         # Should be a timeout configuration object or dict
         assert DEFAULT_TIMEOUTS is not None
-        
+
         # If it's a dict, should have reasonable values
         if isinstance(DEFAULT_TIMEOUTS, dict):
             assert "connect" in DEFAULT_TIMEOUTS or "timeout" in DEFAULT_TIMEOUTS
-        
+
         # Should be a reasonable timeout value
         timeout_value = DEFAULT_TIMEOUTS
         if hasattr(timeout_value, "connect"):
@@ -47,7 +45,7 @@ class TestDefaultConfiguration:
         assert isinstance(DEFAULT_USER_AGENT, str)
         assert len(DEFAULT_USER_AGENT) > 0
         assert "bookalimo" in DEFAULT_USER_AGENT.lower()
-        
+
         # Should include version information
         # Pattern should be like: "bookalimo-python/1.0.0"
         parts = DEFAULT_USER_AGENT.split("/")
@@ -80,11 +78,11 @@ class TestConfigurationLoading:
     def test_google_places_api_key_environment(self):
         """Test Google Places API key from environment."""
         test_key = "test-google-places-api-key-12345"
-        
+
         with patch.dict(os.environ, {"GOOGLE_PLACES_API_KEY": test_key}):
             # Should be accessible via environment
             assert os.getenv("GOOGLE_PLACES_API_KEY") == test_key
-            
+
         # Should be cleared when context exits
         with patch.dict(os.environ, {}, clear=True):
             assert os.getenv("GOOGLE_PLACES_API_KEY") is None
@@ -93,13 +91,13 @@ class TestConfigurationLoading:
         """Test that environment variables take precedence where applicable."""
         # This test would apply if the SDK supports environment-based configuration
         # For now, we test that environment variables don't break anything
-        
+
         test_env_vars = {
             "HTTP_PROXY": "http://proxy.example.com:8080",
             "HTTPS_PROXY": "http://proxy.example.com:8080",
             "NO_PROXY": "localhost,127.0.0.1",
         }
-        
+
         with patch.dict(os.environ, test_env_vars):
             # Should not break default configuration loading
             assert DEFAULT_BASE_URL == "https://sandbox.bookalimo.com"
@@ -110,12 +108,12 @@ class TestConfigurationLoading:
         original_base_url = DEFAULT_BASE_URL
         original_retries = DEFAULT_RETRIES
         original_backoff = DEFAULT_BACKOFF
-        
+
         # These should be immutable
         assert DEFAULT_BASE_URL == original_base_url
         assert DEFAULT_RETRIES == original_retries
         assert DEFAULT_BACKOFF == original_backoff
-        
+
         # Attempting to modify should not affect other imports
         # (This is more about testing our test setup than the actual code)
         try:
@@ -134,26 +132,28 @@ class TestUserAgentParsing:
         """Test user agent follows expected format."""
         # Should follow pattern: product/version (optional comments)
         ua_parts = DEFAULT_USER_AGENT.split()
-        
+
         # First part should be product/version
         assert len(ua_parts) >= 1
         product_version = ua_parts[0]
-        
+
         assert "/" in product_version
         product, version = product_version.split("/", 1)
-        
+
         assert len(product) > 0
         assert len(version) > 0
-        
+
         # Version should look like a version number
         version_parts = version.split(".")
         assert len(version_parts) >= 2  # At least major.minor
-        
+
         # Should be numeric version components
         for part in version_parts:
             # Remove any non-numeric suffixes (like -alpha, -beta)
             numeric_part = part.split("-")[0]
-            assert numeric_part.isdigit(), f"Version part '{part}' should start with digits"
+            assert numeric_part.isdigit(), (
+                f"Version part '{part}' should start with digits"
+            )
 
     def test_user_agent_length(self):
         """Test user agent string is reasonable length."""
@@ -170,13 +170,20 @@ class TestUserAgentParsing:
     def test_user_agent_no_sensitive_info(self):
         """Test user agent doesn't contain sensitive information."""
         ua_lower = DEFAULT_USER_AGENT.lower()
-        
+
         # Should not contain potentially sensitive info
         sensitive_terms = [
-            "password", "key", "token", "secret", "private",
-            "username", "email", "phone", "address"
+            "password",
+            "key",
+            "token",
+            "secret",
+            "private",
+            "username",
+            "email",
+            "phone",
+            "address",
         ]
-        
+
         for term in sensitive_terms:
             assert term not in ua_lower, f"User agent contains sensitive term: {term}"
 
@@ -187,21 +194,21 @@ class TestTimeoutConfiguration:
     def test_timeout_is_valid(self):
         """Test that timeout configuration is valid."""
         timeout = DEFAULT_TIMEOUTS
-        
+
         # Should be either a number or a timeout object
         if isinstance(timeout, (int, float)):
             assert timeout > 0
             assert timeout <= 300  # 5 minutes max seems reasonable
         else:
             # Should be a timeout object with expected attributes
-            timeout_attrs = ["connect", "read", "write", "pool"] 
+            timeout_attrs = ["connect", "read", "write", "pool"]
             has_timeout_attr = any(hasattr(timeout, attr) for attr in timeout_attrs)
             assert has_timeout_attr, "Timeout object should have timeout attributes"
 
     def test_timeout_serialization(self):
         """Test that timeout can be serialized (for logging, etc.)."""
         timeout = DEFAULT_TIMEOUTS
-        
+
         # Should be convertible to string without errors
         timeout_str = str(timeout)
         assert isinstance(timeout_str, str)
@@ -210,17 +217,17 @@ class TestTimeoutConfiguration:
     def test_timeout_reasonable_values(self):
         """Test that timeout values are reasonable."""
         timeout = DEFAULT_TIMEOUTS
-        
+
         # Extract timeout values for testing
         timeout_values = []
-        
+
         if isinstance(timeout, (int, float)):
             timeout_values.append(timeout)
         elif hasattr(timeout, "connect"):
             timeout_values.append(timeout.connect)
             if hasattr(timeout, "read"):
                 timeout_values.append(timeout.read)
-        
+
         for value in timeout_values:
             if value is not None:
                 assert isinstance(value, (int, float))
@@ -240,9 +247,9 @@ class TestRetryConfiguration:
         """Test backoff timing is reasonable."""
         assert DEFAULT_BACKOFF > 0, "Backoff should be positive"
         assert DEFAULT_BACKOFF <= 60, "Backoff should not be excessive"
-        
+
         # Test exponential backoff would be reasonable
-        max_backoff = DEFAULT_BACKOFF * (2 ** DEFAULT_RETRIES)
+        max_backoff = DEFAULT_BACKOFF * (2**DEFAULT_RETRIES)
         assert max_backoff <= 300, "Maximum backoff should be reasonable (≤5 minutes)"
 
     def test_retry_configuration_consistency(self):
@@ -250,12 +257,14 @@ class TestRetryConfiguration:
         # If retries is 0, backoff is irrelevant but should still be positive
         if DEFAULT_RETRIES == 0:
             assert DEFAULT_BACKOFF > 0  # Should still be valid even if unused
-        
+
         # Total maximum retry time should be reasonable
         if DEFAULT_RETRIES > 0:
             # Sum of geometric series: a * (1 - r^n) / (1 - r) where r = 2
-            max_total_time = DEFAULT_BACKOFF * (2 ** DEFAULT_RETRIES - 1)
-            assert max_total_time <= 600, "Total retry time should be reasonable (≤10 minutes)"
+            max_total_time = DEFAULT_BACKOFF * (2**DEFAULT_RETRIES - 1)
+            assert max_total_time <= 600, (
+                "Total retry time should be reasonable (≤10 minutes)"
+            )
 
 
 class TestConfigurationIntegrity:
@@ -270,7 +279,7 @@ class TestConfigurationIntegrity:
             DEFAULT_RETRIES,
             DEFAULT_BACKOFF,
         ]
-        
+
         for value in config_values:
             assert value is not None, f"Configuration value should not be None: {value}"
 
@@ -280,7 +289,7 @@ class TestConfigurationIntegrity:
         assert isinstance(DEFAULT_USER_AGENT, str)
         assert isinstance(DEFAULT_RETRIES, int)
         assert isinstance(DEFAULT_BACKOFF, (int, float))
-        
+
         # DEFAULT_TIMEOUTS can be various types depending on implementation
         timeout_valid_types = (int, float, dict, object)
         assert isinstance(DEFAULT_TIMEOUTS, timeout_valid_types)
@@ -288,21 +297,14 @@ class TestConfigurationIntegrity:
     def test_config_loading_performance(self):
         """Test that config loading is fast."""
         import time
-        
+
         start_time = time.perf_counter()
-        
+
         # Re-import config (simulating loading)
-        from bookalimo.config import (
-            DEFAULT_BASE_URL as _url,
-            DEFAULT_TIMEOUTS as _timeouts,
-            DEFAULT_USER_AGENT as _ua,
-            DEFAULT_RETRIES as _retries,
-            DEFAULT_BACKOFF as _backoff,
-        )
-        
+
         end_time = time.perf_counter()
         elapsed = end_time - start_time
-        
+
         # Config loading should be very fast
         assert elapsed < 0.1, f"Config loading took {elapsed:.4f}s"
 
@@ -312,18 +314,20 @@ class TestConfigurationIntegrity:
         # - Make network requests
         # - Create files
         # - Modify global state
-        
+
         original_env = os.environ.copy()
-        
+
         try:
             # Import config again
             import importlib
+
             import bookalimo.config
+
             importlib.reload(bookalimo.config)
-            
+
             # Environment should be unchanged
             assert os.environ == original_env
-            
+
         finally:
             # Restore environment just in case
             os.environ.clear()

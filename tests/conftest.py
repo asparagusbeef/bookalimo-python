@@ -5,7 +5,6 @@ import os
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, Dict, Optional
-from unittest.mock import Mock, AsyncMock
 
 import httpx
 import pytest
@@ -13,18 +12,14 @@ import respx
 from pydantic import BaseModel
 
 from bookalimo import AsyncBookalimo, Bookalimo
-from bookalimo.exceptions import BookalimoHTTPError
 from bookalimo.schemas.booking import (
     CreditCard,
     Location,
     LocationType,
-    PriceResponse,
-    RateType,
 )
 from bookalimo.transport.auth import Credentials
 from bookalimo.transport.httpx_async import AsyncTransport
 from bookalimo.transport.httpx_sync import SyncTransport
-
 
 # Test configuration
 TEST_BASE_URL = "https://sandbox.bookalimo.com"
@@ -65,14 +60,15 @@ def real_bookalimo_credentials() -> Optional[Credentials]:
     testing_user_json = os.getenv("BOOKALIMO_TESTING_USER")
     if not testing_user_json:
         return None
-    
+
     try:
         import json
+
         user_data = json.loads(testing_user_json)
         return Credentials.create(
             user_id=user_data["id"],
             password=user_data["password"],
-            is_customer=user_data.get("is_customer", "false").lower() == "true"
+            is_customer=user_data.get("is_customer", "false").lower() == "true",
         )
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         pytest.fail(f"Invalid BOOKALIMO_TESTING_USER format: {e}")
@@ -82,40 +78,42 @@ def real_bookalimo_credentials() -> Optional[Credentials]:
 def skip_if_no_real_credentials(real_bookalimo_credentials):
     """Skip test if real Bookalimo credentials are not available."""
     if real_bookalimo_credentials is None:
-        pytest.skip("Real Bookalimo credentials not available (BOOKALIMO_TESTING_USER not set)")
+        pytest.skip(
+            "Real Bookalimo credentials not available (BOOKALIMO_TESTING_USER not set)"
+        )
     return real_bookalimo_credentials
 
 
 @pytest.fixture
 def sample_pickup_location() -> Location:
     """Sample pickup location for testing."""
+    from bookalimo.schemas.booking import Address, City
+
     return Location(
         type=LocationType.ADDRESS,
-        name="123 Test Street",
-        line1="123 Test Street",
-        city="New York",
-        state="NY",
-        zip_code="10001",
-        country="US",
-        latitude=40.7128,
-        longitude=-74.0060,
+        address=Address(
+            place_name="123 Test Street",
+            street_name="Test Street",
+            building="123",
+            zip="10001",
+            city=City(
+                city_name="New York",
+                country_code="US",
+                state_code="NY",
+                state_name="New York",
+            ),
+        ),
     )
 
 
 @pytest.fixture
 def sample_dropoff_location() -> Location:
     """Sample dropoff location for testing."""
+    from bookalimo.schemas.booking import Airport
+
     return Location(
         type=LocationType.AIRPORT,
-        name="John F. Kennedy International Airport",
-        line1="JFK Airport",
-        city="Queens",
-        state="NY",
-        zip_code="11430",
-        country="US",
-        airport_code="JFK",
-        latitude=40.6413,
-        longitude=-73.7781,
+        airport=Airport(iata_code="JFK", country_code="US", state_code="NY"),
     )
 
 
@@ -124,11 +122,10 @@ def sample_credit_card() -> CreditCard:
     """Sample credit card for testing."""
     return CreditCard(
         number="4111111111111111",
-        exp_month="12",
-        exp_year="25",
+        expiration="12/25",
         cvv="123",
-        cardholder_name="John Doe",
-        billing_zip="10001",
+        card_holder="John Doe",
+        zip="10001",
     )
 
 
@@ -137,14 +134,21 @@ def sample_price_response_data() -> Dict[str, Any]:
     """Sample price response data."""
     return {
         "token": "test-session-token-12345",
-        "total": 150.00,
-        "base_rate": 120.00,
-        "tax": 15.00,
-        "tip": 15.00,
-        "currency": "USD",
-        "car_class_code": "SEDAN",
-        "estimated_time": "45 minutes",
-        "distance": "25.3 miles",
+        "prices": [
+            {
+                "car_class": "SEDAN",
+                "car_description": "Standard Sedan",
+                "max_passengers": 4,
+                "max_luggage": 2,
+                "price": 120.00,
+                "price_default": 150.00,
+                "image128": "http://example.com/sedan128.png",
+                "image256": "http://example.com/sedan256.png",
+                "image512": "http://example.com/sedan512.png",
+                "default_meet_greet": 1,
+                "meet_greets": [],
+            }
+        ],
     }
 
 
@@ -258,16 +262,17 @@ def setup_server_error(mock_respx: respx.MockRouter):
 def setup_env_vars():
     """Set up environment variables for testing."""
     original_env = os.environ.copy()
-    
+
     # Set test environment variables (only if not already set)
     if "GOOGLE_PLACES_API_KEY" not in os.environ:
         os.environ["GOOGLE_PLACES_API_KEY"] = MOCK_API_KEY
-    
+
     yield
-    
+
     # Restore original environment (but preserve CI secrets)
     ci_secrets = {
-        key: value for key, value in os.environ.items() 
+        key: value
+        for key, value in os.environ.items()
         if key in ["GOOGLE_PLACES_API_KEY", "BOOKALIMO_TESTING_USER"]
         and key in original_env
     }
@@ -286,12 +291,12 @@ def mock_places_autocomplete_response():
                 "place_id": "ChIJaXQRs6lZwokRY6tbFzB7VhE",
                 "structured_formatting": {
                     "main_text": "Empire State Building",
-                    "secondary_text": "5th Avenue, New York, NY, USA"
+                    "secondary_text": "5th Avenue, New York, NY, USA",
                 },
-                "types": ["establishment", "point_of_interest", "tourist_attraction"]
+                "types": ["establishment", "point_of_interest", "tourist_attraction"],
             }
         ],
-        "status": "OK"
+        "status": "OK",
     }
 
 
@@ -304,11 +309,8 @@ def mock_places_search_response():
                 "id": "ChIJaXQRs6lZwokRY6tbFzB7VhE",
                 "displayName": {"text": "Empire State Building"},
                 "formattedAddress": "20 W 34th St, New York, NY 10001, USA",
-                "location": {
-                    "latitude": 40.7484405,
-                    "longitude": -73.9856644
-                },
-                "types": ["establishment", "point_of_interest", "tourist_attraction"]
+                "location": {"latitude": 40.7484405, "longitude": -73.9856644},
+                "types": ["establishment", "point_of_interest", "tourist_attraction"],
             }
         ]
     }
@@ -328,6 +330,7 @@ async def does_not_raise_async():
 
 class MockResponse(BaseModel):
     """Mock response for testing."""
+
     success: bool = True
     data: Optional[Dict[str, Any]] = None
     message: Optional[str] = None
@@ -346,10 +349,60 @@ def create_mock_response(
     )
 
 
-def assert_credentials_in_request(request: httpx.Request, expected_credentials: Credentials):
+def create_test_address_location(
+    name: str = "Test Address",
+    city: str = "Test City",
+    state: str = "NY",
+    country: str = "US",
+    zip_code: str = "10001",
+    street: str = None,
+    building: str = None,
+) -> Location:
+    """Helper to create test address locations with proper structure."""
+    from bookalimo.schemas.booking import Address, City
+
+    return Location(
+        type=LocationType.ADDRESS,
+        address=Address(
+            place_name=name,
+            street_name=street,
+            building=building,
+            zip=zip_code,
+            city=City(
+                city_name=city,
+                country_code=country,
+                state_code=state,
+                state_name=state  # Use state code as name for simplicity
+            )
+        )
+    )
+
+
+def create_test_airport_location(
+    iata_code: str = "TST",
+    country: str = "US",
+    state: str = "NY"
+) -> Location:
+    """Helper to create test airport locations with proper structure."""
+    from bookalimo.schemas.booking import Airport
+
+    return Location(
+        type=LocationType.AIRPORT,
+        airport=Airport(
+            iata_code=iata_code,
+            country_code=country,
+            state_code=state
+        )
+    )
+
+
+def assert_credentials_in_request(
+    request: httpx.Request, expected_credentials: Credentials
+):
     """Assert that credentials are properly included in request."""
     if hasattr(request, "content") and request.content:
         import json
+
         try:
             data = json.loads(request.content.decode())
             assert "credentials" in data

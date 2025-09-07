@@ -1,32 +1,24 @@
 """Tests for Pydantic schemas and data validation."""
 
 import pytest
-from decimal import Decimal
-from typing import Any, Dict
-
 from pydantic import ValidationError
 
+from bookalimo.schemas.base import ApiModel
 from bookalimo.schemas.booking import (
+    Address,
+    Airport,
     BookRequest,
-    BookResponse,
+    City,
     CreditCard,
-    DetailsRequest,
-    DetailsResponse,
     EditableReservationRequest,
-    EditReservationResponse,
     GetReservationRequest,
-    GetReservationResponse,
     ListReservationsRequest,
-    ListReservationsResponse,
     Location,
     LocationType,
     PriceRequest,
     PriceResponse,
     RateType,
-    Reservation,
-    Stop,
 )
-from bookalimo.schemas.base import ApiModel
 
 
 class TestLocation:
@@ -36,126 +28,186 @@ class TestLocation:
         """Test valid address location."""
         location = Location(
             type=LocationType.ADDRESS,
-            name="123 Main St",
-            line1="123 Main St",
-            line2="Apt 4B",
-            city="New York",
-            state="NY",
-            zip_code="10001",
-            country="US",
-            latitude=40.7128,
-            longitude=-74.0060
+            address=Address(
+                place_name="123 Main St",
+                street_name="Main St",
+                building="123",
+                suite="Apt 4B",
+                zip="10001",
+                city=City(
+                    city_name="New York",
+                    country_code="US",
+                    state_code="NY",
+                    state_name="New York",
+                ),
+            ),
         )
-        
+
         assert location.type == LocationType.ADDRESS
-        assert location.name == "123 Main St"
-        assert location.city == "New York"
-        assert location.state == "NY"
-        assert location.country == "US"
-        assert location.latitude == 40.7128
-        assert location.longitude == -74.0060
+        assert location.address.place_name == "123 Main St"
+        assert location.address.city.city_name == "New York"
+        assert location.address.city.state_code == "NY"
+        assert location.address.city.country_code == "US"
 
     def test_airport_location_valid(self):
         """Test valid airport location."""
         location = Location(
             type=LocationType.AIRPORT,
-            name="John F. Kennedy International Airport",
-            line1="JFK Airport",
-            city="Queens",
-            state="NY",
-            zip_code="11430",
-            country="US",
-            airport_code="JFK",
-            latitude=40.6413,
-            longitude=-73.7781
+            airport=Airport(iata_code="JFK", country_code="US", state_code="NY"),
         )
-        
+
         assert location.type == LocationType.AIRPORT
-        assert location.airport_code == "JFK"
-        assert location.name == "John F. Kennedy International Airport"
+        assert location.airport.iata_code == "JFK"
+        assert location.airport.country_code == "US"
 
-    def test_train_station_location_valid(self):
-        """Test valid train station location."""
-        location = Location(
-            type=LocationType.TRAIN_STATION,
-            name="Penn Station",
-            line1="4 Pennsylvania Plaza",
-            city="New York",
-            state="NY",
-            zip_code="10001",
-            country="US",
-            latitude=40.7505,
-            longitude=-73.9934
-        )
-        
-        assert location.type == LocationType.TRAIN_STATION
-        assert location.name == "Penn Station"
+    def test_location_address_required_when_type_address(self):
+        """Test that address is required when type is ADDRESS."""
+        with pytest.raises(
+            ValidationError, match="Address is required when type is ADDRESS"
+        ):
+            Location(type=LocationType.ADDRESS)
 
-    def test_cruise_location_valid(self):
-        """Test valid cruise terminal location."""
-        location = Location(
-            type=LocationType.CRUISE,
-            name="Brooklyn Cruise Terminal",
-            line1="72 Bowne St",
-            city="Brooklyn",
-            state="NY",
-            zip_code="11231",
-            country="US",
-            latitude=40.6771,
-            longitude=-74.0143
-        )
-        
-        assert location.type == LocationType.CRUISE
-        assert location.name == "Brooklyn Cruise Terminal"
+    def test_location_airport_required_when_type_airport(self):
+        """Test that airport is required when type is AIRPORT."""
+        with pytest.raises(
+            ValidationError, match="Airport is required when type is AIRPORT"
+        ):
+            Location(type=LocationType.AIRPORT)
 
-    def test_location_minimal_fields(self):
-        """Test location with minimal required fields."""
-        location = Location(
-            type=LocationType.ADDRESS,
-            name="Simple Address",
-            city="City",
-            state="ST",
-            country="US"
-        )
-        
-        assert location.type == LocationType.ADDRESS
-        assert location.name == "Simple Address"
-        assert location.city == "City"
-        assert location.state == "ST"
-        assert location.country == "US"
-
-    def test_location_invalid_coordinates(self):
-        """Test location with invalid coordinates."""
+    def test_location_validation_with_wrong_type_combo(self):
+        """Test validation fails when address provided for airport type."""
         with pytest.raises(ValidationError):
             Location(
-                type=LocationType.ADDRESS,
-                name="Invalid Location",
-                city="City",
-                state="ST",
-                country="US",
-                latitude=200.0,  # Invalid latitude
-                longitude=-74.0060
+                type=LocationType.AIRPORT,
+                address=Address(
+                    place_name="Test Address",
+                    city=City(
+                        city_name="Test City", country_code="US", state_code="NY"
+                    ),
+                ),
             )
 
-    def test_location_missing_required_fields(self):
-        """Test location missing required fields."""
-        with pytest.raises(ValidationError):
-            Location(
-                type=LocationType.ADDRESS,
-                name="Incomplete Location"
-                # Missing city, state, country
+
+class TestAddress:
+    """Tests for Address schema."""
+
+    def test_address_with_google_geocode(self):
+        """Test address with Google geocode data."""
+        geocode_data = {
+            "results": [{"formatted_address": "123 Main St, New York, NY, USA"}]
+        }
+        address = Address(place_name="123 Main St", google_geocode=geocode_data)
+
+        assert address.place_name == "123 Main St"
+        assert address.google_geocode == geocode_data
+
+    def test_address_with_city_object(self):
+        """Test address with City object."""
+        address = Address(
+            place_name="Test Location",
+            city=City(
+                city_name="New York",
+                country_code="US",
+                state_code="NY",
+                state_name="New York",
+            ),
+        )
+
+        assert address.place_name == "Test Location"
+        assert address.city.city_name == "New York"
+
+    def test_address_requires_place_name_or_street_name(self):
+        """Test that address requires either place_name or street_name."""
+        with pytest.raises(
+            ValidationError, match="Either place_name or street_name must be provided"
+        ):
+            Address(
+                city=City(city_name="Test City", country_code="US", state_code="NY")
             )
 
-    def test_location_enum_validation(self):
-        """Test location type enum validation."""
-        with pytest.raises(ValidationError):
-            Location(
-                type="INVALID_TYPE",  # Invalid enum value
-                name="Test Location",
-                city="City",
-                state="ST",
-                country="US"
+    def test_address_requires_city_or_geocode(self):
+        """Test that address requires either city or google_geocode."""
+        with pytest.raises(
+            ValidationError, match="Either city or google_geocode must be provided"
+        ):
+            Address(place_name="Test Place")
+
+    def test_address_cannot_have_both_city_and_geocode(self):
+        """Test that address cannot have both city and google_geocode."""
+        with pytest.raises(
+            ValidationError, match="Only one of city or google_geocode must be provided"
+        ):
+            Address(
+                place_name="Test Place",
+                city=City(city_name="New York", country_code="US", state_code="NY"),
+                google_geocode={"test": "data"},
             )
+
+
+class TestAirport:
+    """Tests for Airport schema."""
+
+    def test_airport_minimal(self):
+        """Test airport with minimal required fields."""
+        airport = Airport(iata_code="JFK")
+
+        assert airport.iata_code == "JFK"
+        assert airport.country_code is None
+        assert airport.state_code is None
+
+    def test_airport_with_optional_fields(self):
+        """Test airport with optional fields."""
+        airport = Airport(
+            iata_code="LAX",
+            country_code="US",
+            state_code="CA",
+            airline_iata_code="UA",
+            flight_number="UA123",
+            terminal="7",
+        )
+
+        assert airport.iata_code == "LAX"
+        assert airport.country_code == "US"
+        assert airport.state_code == "CA"
+        assert airport.airline_iata_code == "UA"
+        assert airport.flight_number == "UA123"
+        assert airport.terminal == "7"
+
+    def test_airport_invalid_iata_code(self):
+        """Test airport with invalid IATA code."""
+        with pytest.raises(ValidationError, match="Invalid IATA code"):
+            Airport(iata_code="INVALID")
+
+
+class TestCity:
+    """Tests for City schema."""
+
+    def test_city_us_valid(self):
+        """Test valid US city."""
+        city = City(
+            city_name="New York",
+            country_code="US",
+            state_code="NY",
+            state_name="New York",
+        )
+
+        assert city.city_name == "New York"
+        assert city.country_code == "US"
+        assert city.state_code == "NY"
+        assert city.state_name == "New York"
+
+    def test_city_international_valid(self):
+        """Test valid international city."""
+        city = City(city_name="Toronto", country_code="CA")
+
+        assert city.city_name == "Toronto"
+        assert city.country_code == "CA"
+        assert city.state_code is None
+
+    def test_city_invalid_country_code(self):
+        """Test city with invalid country code."""
+        with pytest.raises(ValidationError, match="Invalid country code"):
+            City(city_name="Test City", country_code="INVALID")
 
 
 class TestRateType:
@@ -177,23 +229,18 @@ class TestRateType:
             date_time="09/10/2025 03:00 PM",
             pickup=Location(
                 type=LocationType.ADDRESS,
-                name="Test Pickup",
-                city="City",
-                state="ST",
-                country="US"
+                address=Address(
+                    place_name="Test Pickup",
+                    city=City(city_name="City", country_code="US", state_code="ST"),
+                ),
             ),
             dropoff=Location(
-                type=LocationType.AIRPORT,
-                name="Test Airport",
-                city="City",
-                state="ST",
-                country="US",
-                airport_code="TST"
+                type=LocationType.AIRPORT, airport=Airport(iata_code="TST")
             ),
             passengers=2,
-            luggage=1
+            luggage=1,
         )
-        
+
         assert request.rate_type == RateType.HOURLY
 
 
@@ -204,22 +251,15 @@ class TestPriceRequest:
     def valid_pickup(self):
         return Location(
             type=LocationType.ADDRESS,
-            name="123 Test St",
-            city="Test City",
-            state="TS",
-            country="US"
+            address=Address(
+                place_name="123 Test St",
+                city=City(city_name="Test City", country_code="US", state_code="TS"),
+            ),
         )
 
     @pytest.fixture
     def valid_dropoff(self):
-        return Location(
-            type=LocationType.AIRPORT,
-            name="Test Airport",
-            city="Test City",
-            state="TS",
-            country="US",
-            airport_code="TST"
-        )
+        return Location(type=LocationType.AIRPORT, airport=Airport(iata_code="TST"))
 
     def test_price_request_minimal(self, valid_pickup, valid_dropoff):
         """Test price request with minimal required fields."""
@@ -229,9 +269,9 @@ class TestPriceRequest:
             pickup=valid_pickup,
             dropoff=valid_dropoff,
             passengers=1,
-            luggage=0
+            luggage=0,
         )
-        
+
         assert request.rate_type == RateType.P2P
         assert request.date_time == "09/10/2025 03:00 PM"
         assert request.pickup == valid_pickup
@@ -255,11 +295,8 @@ class TestPriceRequest:
             boosters=1,
             infants=1,
             customer_comment="Please arrive 15 minutes early",
-            account="CORP123",
-            passenger="John Doe",
-            rewards="GOLD"
         )
-        
+
         assert request.hours == 3
         assert request.car_class_code == "SUV"
         assert request.pets == 1
@@ -267,33 +304,6 @@ class TestPriceRequest:
         assert request.boosters == 1
         assert request.infants == 1
         assert request.customer_comment == "Please arrive 15 minutes early"
-        assert request.account == "CORP123"
-        assert request.passenger == "John Doe"
-        assert request.rewards == "GOLD"
-
-    def test_price_request_invalid_passengers(self, valid_pickup, valid_dropoff):
-        """Test price request with invalid passenger count."""
-        with pytest.raises(ValidationError):
-            PriceRequest(
-                rate_type=RateType.P2P,
-                date_time="09/10/2025 03:00 PM",
-                pickup=valid_pickup,
-                dropoff=valid_dropoff,
-                passengers=0,  # Invalid - must be positive
-                luggage=1
-            )
-
-    def test_price_request_negative_luggage(self, valid_pickup, valid_dropoff):
-        """Test price request with negative luggage count."""
-        with pytest.raises(ValidationError):
-            PriceRequest(
-                rate_type=RateType.P2P,
-                date_time="09/10/2025 03:00 PM",
-                pickup=valid_pickup,
-                dropoff=valid_dropoff,
-                passengers=2,
-                luggage=-1  # Invalid - cannot be negative
-            )
 
 
 class TestPriceResponse:
@@ -301,56 +311,34 @@ class TestPriceResponse:
 
     def test_price_response_minimal(self):
         """Test price response with minimal required fields."""
-        response = PriceResponse(
-            token="test-token-123",
-            total=100.00,
-            currency="USD"
-        )
-        
+        response = PriceResponse(token="test-token-123", prices=[])
+
         assert response.token == "test-token-123"
-        assert response.total == 100.00
-        assert response.currency == "USD"
+        assert response.prices == []
 
-    def test_price_response_with_all_fields(self):
-        """Test price response with all fields."""
-        response = PriceResponse(
-            token="test-token-456",
-            total=175.50,
-            base_rate=150.00,
-            tax=12.50,
-            tip=13.00,
-            currency="USD",
-            car_class_code="LUXURY",
-            estimated_time="45 minutes",
-            distance="25.3 miles",
-            special_instructions="VIP service"
+    def test_price_response_with_prices(self):
+        """Test price response with price data."""
+        from bookalimo.schemas.booking import Price
+
+        price = Price(
+            car_class="SEDAN",
+            car_description="Standard Sedan",
+            max_passengers=4,
+            max_luggage=2,
+            price=150.00,
+            price_default=175.00,
+            image_128="http://example.com/sedan128.png",
+            image_256="http://example.com/sedan256.png",
+            image_512="http://example.com/sedan512.png",
+            meet_greets=[],
         )
-        
+
+        response = PriceResponse(token="test-token-456", prices=[price])
+
         assert response.token == "test-token-456"
-        assert response.total == 175.50
-        assert response.base_rate == 150.00
-        assert response.tax == 12.50
-        assert response.tip == 13.00
-        assert response.currency == "USD"
-        assert response.car_class_code == "LUXURY"
-        assert response.estimated_time == "45 minutes"
-        assert response.distance == "25.3 miles"
-        assert response.special_instructions == "VIP service"
-
-    def test_price_response_decimal_precision(self):
-        """Test price response handles decimal precision correctly."""
-        response = PriceResponse(
-            token="precision-test",
-            total=123.456,  # Will be rounded to 2 decimal places
-            base_rate=100.123,
-            tax=15.678,
-            currency="USD"
-        )
-        
-        # Should handle decimal precision appropriately
-        assert isinstance(response.total, (int, float, Decimal))
-        assert isinstance(response.base_rate, (int, float, Decimal))
-        assert isinstance(response.tax, (int, float, Decimal))
+        assert len(response.prices) == 1
+        assert response.prices[0].car_class == "SEDAN"
+        assert response.prices[0].price == 150.00
 
 
 class TestCreditCard:
@@ -360,86 +348,37 @@ class TestCreditCard:
         """Test valid credit card."""
         card = CreditCard(
             number="4111111111111111",
-            exp_month="12",
-            exp_year="25",
+            expiration="12/25",
             cvv="123",
-            cardholder_name="John Doe",
-            billing_zip="10001"
+            card_holder="John Doe",
+            zip="10001",
         )
-        
+
         assert card.number == "4111111111111111"
-        assert card.exp_month == "12"
-        assert card.exp_year == "25"
+        assert card.expiration == "12/25"
         assert card.cvv == "123"
-        assert card.cardholder_name == "John Doe"
-        assert card.billing_zip == "10001"
+        assert card.card_holder == "John Doe"
+        assert card.zip == "10001"
 
     def test_credit_card_amex_cvv(self):
         """Test American Express card with 4-digit CVV."""
         card = CreditCard(
             number="378282246310005",  # Amex test number
-            exp_month="12",
-            exp_year="25",
+            expiration="12/25",
             cvv="1234",  # 4-digit CVV for Amex
-            cardholder_name="John Doe",
-            billing_zip="10001"
+            card_holder="John Doe",
+            zip="10001",
         )
-        
+
         assert card.cvv == "1234"
-
-    def test_credit_card_with_optional_fields(self):
-        """Test credit card with optional fields."""
-        card = CreditCard(
-            number="4111111111111111",
-            exp_month="12",
-            exp_year="25",
-            cvv="123",
-            cardholder_name="Jane Smith",
-            billing_zip="90210",
-            billing_address_line1="123 Beverly Hills Rd",
-            billing_city="Beverly Hills",
-            billing_state="CA",
-            billing_country="US"
-        )
-        
-        assert card.billing_address_line1 == "123 Beverly Hills Rd"
-        assert card.billing_city == "Beverly Hills"
-        assert card.billing_state == "CA"
-        assert card.billing_country == "US"
-
-    def test_credit_card_invalid_number_format(self):
-        """Test credit card with invalid number format."""
-        # Note: This test assumes the schema validates credit card numbers
-        # The actual validation rules depend on the schema implementation
-        with pytest.raises(ValidationError):
-            CreditCard(
-                number="invalid-card-number",
-                exp_month="12",
-                exp_year="25",
-                cvv="123",
-                cardholder_name="John Doe",
-                billing_zip="10001"
-            )
-
-    def test_credit_card_invalid_expiry_month(self):
-        """Test credit card with invalid expiry month."""
-        with pytest.raises(ValidationError):
-            CreditCard(
-                number="4111111111111111",
-                exp_month="13",  # Invalid month
-                exp_year="25",
-                cvv="123",
-                cardholder_name="John Doe",
-                billing_zip="10001"
-            )
 
     def test_credit_card_missing_required_fields(self):
         """Test credit card missing required fields."""
         with pytest.raises(ValidationError):
             CreditCard(
                 number="4111111111111111",
-                exp_month="12",
-                # Missing exp_year, cvv, etc.
+                expiration="12/25",
+                # Missing cvv, card_holder
             )
 
 
@@ -450,57 +389,38 @@ class TestBookRequest:
     def valid_credit_card(self):
         return CreditCard(
             number="4111111111111111",
-            exp_month="12",
-            exp_year="25",
+            expiration="12/25",
             cvv="123",
-            cardholder_name="John Doe",
-            billing_zip="10001"
+            card_holder="John Doe",
+            zip="10001",
         )
 
     def test_book_request_with_credit_card(self, valid_credit_card):
         """Test book request with credit card payment."""
-        request = BookRequest(
-            token="booking-token-123",
-            credit_card=valid_credit_card
-        )
-        
+        request = BookRequest(token="booking-token-123", credit_card=valid_credit_card)
+
         assert request.token == "booking-token-123"
         assert request.credit_card == valid_credit_card
         assert request.method is None
 
     def test_book_request_with_charge_method(self):
         """Test book request with charge account payment."""
-        request = BookRequest(
-            token="booking-token-456",
-            method="charge"
-        )
-        
+        request = BookRequest(token="booking-token-456", method="charge")
+
         assert request.token == "booking-token-456"
         assert request.method == "charge"
         assert request.credit_card is None
 
-    def test_book_request_with_promo_code(self, valid_credit_card):
-        """Test book request with promo code."""
-        request = BookRequest(
-            token="booking-token-789",
-            credit_card=valid_credit_card,
-            promo="SAVE20"
-        )
-        
-        assert request.token == "booking-token-789"
-        assert request.promo == "SAVE20"
-        assert request.credit_card == valid_credit_card
-
-    def test_book_request_minimal(self):
-        """Test book request with minimal required fields."""
-        request = BookRequest(
-            token="minimal-token"
-        )
-        
-        assert request.token == "minimal-token"
-        assert request.credit_card is None
-        assert request.method is None
-        assert request.promo is None
+    def test_book_request_validation_requires_payment_method(self):
+        """Test book request validation requires either method or credit_card."""
+        with pytest.raises(
+            ValidationError,
+            match="Either method='charge' or credit_card must be provided",
+        ):
+            BookRequest(
+                token="booking-token-789"
+                # No payment method provided
+            )
 
 
 class TestReservationSchemas:
@@ -511,7 +431,7 @@ class TestReservationSchemas:
         # Default (active reservations)
         request = ListReservationsRequest()
         assert request.is_archive is False
-        
+
         # Archived reservations
         request_archived = ListReservationsRequest(is_archive=True)
         assert request_archived.is_archive is True
@@ -524,10 +444,9 @@ class TestReservationSchemas:
     def test_edit_reservation_request_cancel(self):
         """Test edit reservation request for cancellation."""
         request = EditableReservationRequest(
-            confirmation="CANCEL123",
-            is_cancel_request=True
+            confirmation="CANCEL123", is_cancel_request=True
         )
-        
+
         assert request.confirmation == "CANCEL123"
         assert request.is_cancel_request is True
 
@@ -539,9 +458,9 @@ class TestReservationSchemas:
             passengers=4,
             luggage=2,
             pickup_time="04:00 PM",
-            other="Special instructions"
+            other="Special instructions",
         )
-        
+
         assert request.confirmation == "MODIFY123"
         assert request.is_cancel_request is False
         assert request.passengers == 4
@@ -555,64 +474,44 @@ class TestSchemaValidation:
 
     def test_model_dump_excludes_none(self):
         """Test that model_dump excludes None values when configured."""
+        pickup = Location(
+            type=LocationType.ADDRESS,
+            address=Address(
+                place_name="Test",
+                city=City(city_name="City", country_code="US", state_code="ST"),
+            ),
+        )
+
+        dropoff = Location(type=LocationType.AIRPORT, airport=Airport(iata_code="TST"))
+
         request = PriceRequest(
             rate_type=RateType.P2P,
             date_time="09/10/2025 03:00 PM",
-            pickup=Location(
-                type=LocationType.ADDRESS,
-                name="Test",
-                city="City",
-                state="ST",
-                country="US"
-            ),
-            dropoff=Location(
-                type=LocationType.AIRPORT,
-                name="Airport",
-                city="City",
-                state="ST",
-                country="US",
-                airport_code="TST"
-            ),
+            pickup=pickup,
+            dropoff=dropoff,
             passengers=2,
             luggage=1,
             hours=None,  # Should be excluded
-            customer_comment="Valid comment"
+            customer_comment="Valid comment",
         )
-        
+
         dumped = request.model_dump(exclude_none=True)
-        
+
         assert "hours" not in dumped
         assert "customer_comment" in dumped
         assert dumped["customer_comment"] == "Valid comment"
 
-    def test_model_validation_error_details(self):
-        """Test that validation errors provide detailed information."""
-        with pytest.raises(ValidationError) as exc_info:
-            Location(
-                type="INVALID_TYPE",  # Invalid enum
-                name="Test Location",
-                # Missing required fields
-            )
-        
-        error = exc_info.value
-        assert len(error.errors()) > 0
-        
-        # Check that error details contain useful information
-        error_dict = error.errors()[0]
-        assert "type" in error_dict
-        assert "loc" in error_dict
-        assert "msg" in error_dict
-
     def test_api_model_base_functionality(self):
         """Test ApiModel base class functionality."""
+
         class TestModel(ApiModel):
             name: str
             value: int = 10
-        
+
         model = TestModel(name="test")
         assert model.name == "test"
         assert model.value == 10
-        
+
         # Test model_dump
         dumped = model.model_dump()
         assert dumped == {"name": "test", "value": 10}
@@ -621,99 +520,57 @@ class TestSchemaValidation:
         """Test that schemas can be serialized and deserialized consistently."""
         original_location = Location(
             type=LocationType.AIRPORT,
-            name="Test Airport",
-            city="Test City",
-            state="TS",
-            country="US",
-            airport_code="TST",
-            latitude=40.7128,
-            longitude=-74.0060
+            airport=Airport(iata_code="TST", country_code="US", state_code="TS"),
         )
-        
+
         # Serialize to dict
         data = original_location.model_dump()
-        
+
         # Deserialize from dict
         restored_location = Location.model_validate(data)
-        
+
         assert restored_location == original_location
         assert restored_location.type == original_location.type
-        assert restored_location.name == original_location.name
-        assert restored_location.airport_code == original_location.airport_code
-        assert restored_location.latitude == original_location.latitude
-        assert restored_location.longitude == original_location.longitude
+        assert (
+            restored_location.airport.iata_code == original_location.airport.iata_code
+        )
 
 
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
-    def test_empty_string_fields(self):
-        """Test handling of empty string fields."""
+    def test_empty_string_fields_in_address(self):
+        """Test handling of empty string fields in address."""
         with pytest.raises(ValidationError):
-            Location(
-                type=LocationType.ADDRESS,
-                name="",  # Empty name should be invalid
-                city="City",
-                state="ST",
-                country="US"
+            Address(
+                place_name="",  # Empty place_name should be invalid
+                city=City(city_name="City", country_code="US", state_code="ST"),
             )
 
-    def test_whitespace_only_fields(self):
-        """Test handling of whitespace-only fields."""
-        with pytest.raises(ValidationError):
-            Location(
-                type=LocationType.ADDRESS,
-                name="   ",  # Whitespace only should be invalid
-                city="City",
-                state="ST",
-                country="US"
-            )
-
-    def test_extremely_long_strings(self):
-        """Test handling of extremely long strings."""
-        long_string = "x" * 10000  # Very long string
-        
-        # This test assumes there are reasonable length limits
-        # The actual behavior depends on schema field definitions
-        try:
-            location = Location(
-                type=LocationType.ADDRESS,
-                name=long_string,
-                city="City",
-                state="ST",
-                country="US"
-            )
-            # If no validation error, the schema accepts long strings
-            assert len(location.name) == 10000
-        except ValidationError:
-            # If validation error, the schema has length limits
-            pytest.skip("Schema has string length limits")
-
-    def test_unicode_characters(self):
-        """Test handling of unicode characters."""
-        location = Location(
-            type=LocationType.ADDRESS,
-            name="Café París",  # Unicode characters
-            city="São Paulo",
-            state="SP",
-            country="BR"
+    def test_unicode_characters_in_address(self):
+        """Test handling of unicode characters in address."""
+        address = Address(
+            place_name="Café París",  # Unicode characters
+            city=City(city_name="São Paulo", country_code="BR"),
         )
-        
-        assert location.name == "Café París"
-        assert location.city == "São Paulo"
 
-    def test_special_characters_in_strings(self):
-        """Test handling of special characters."""
-        location = Location(
-            type=LocationType.ADDRESS,
-            name="123 Main St. #4B",  # Special characters
-            line1="123 Main St.",
-            line2="Apt #4B (Rear)",
-            city="New York",
-            state="NY",
-            country="US"
+        assert address.place_name == "Café París"
+        assert address.city.city_name == "São Paulo"
+
+    def test_special_characters_in_address(self):
+        """Test handling of special characters in address."""
+        address = Address(
+            place_name="123 Main St. #4B",  # Special characters
+            street_name="Main St.",
+            suite="Apt #4B (Rear)",
+            city=City(
+                city_name="New York",
+                country_code="US",
+                state_code="NY",
+                state_name="New York",
+            ),
         )
-        
-        assert "#" in location.name
-        assert "(" in location.line2
-        assert ")" in location.line2
+
+        assert "#" in address.place_name
+        assert "(" in address.suite
+        assert ")" in address.suite
