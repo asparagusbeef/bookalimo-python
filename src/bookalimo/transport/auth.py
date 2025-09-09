@@ -3,10 +3,10 @@
 import hashlib
 from typing import Any, Optional
 
-from ..schemas.base import ApiModel
+from ..schemas.base import SharedModel
 
 
-class Credentials(ApiModel):
+class Credentials(SharedModel):
     """Authentication credentials for Book-A-Limo API."""
 
     id: str

@@ -5,18 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2] - 2025-09-08
+## [1.0.2] - 2025-09-09
 
 ### Fixed
 - Google Places API key handling in geocoding requests
-- Schema serialization issues with enum handling
 - Optional field handling in Google Places models
 
 ### Changed
+- **BREAKING**: Complete schema architecture overhaul - request models serialize to camelCase, response models to snake_case
+- **BREAKING**: Schema imports updated to `from bookalimo.schemas import`
 - **BREAKING**: Method calls updated from `search_text` to `search`
+- **BREAKING**: Removed `ApiModel` class - use `RequestModel`/`ResponseModel`
+- **BREAKING**: `PriceData` renamed to `CarClassPrice`
 - Refactored sync/async clients to reduce code duplication
-- Enhanced logging with secure parameter redaction
-- Improved schema serialization with context options
+- Redacted httpx logging plain urls with sensitive parameters
 - Updated documentation structure and content
 
 ## [1.0.1] - 2025-09-08

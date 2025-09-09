@@ -13,7 +13,7 @@ from bookalimo.exceptions import (
     BookalimoHTTPError,
     BookalimoTimeout,
 )
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     Address,
     Airport,
     City,

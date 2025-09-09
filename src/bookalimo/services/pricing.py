@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from ..schemas.booking import (
+from ..schemas import (
     DetailsRequest,
     DetailsResponse,
     Location,

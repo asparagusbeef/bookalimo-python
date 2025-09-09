@@ -1,6 +1,7 @@
 """
-Pydantic schemas for Book-A-Limo booking operations.
-Includes all models related to pricing, reservations, and booking requests.
+Shared base models for Book-A-Limo API data structures.
+Contains field definitions without serialization opinions -
+request/response variants inherit from these and set appropriate serialization.
 """
 
 import warnings
@@ -14,7 +15,7 @@ import us
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
-from .base import ApiModel
+from .base import SharedModel
 
 
 @lru_cache(maxsize=1)
@@ -28,6 +29,7 @@ def _load_iata_index() -> tuple[dict[str, Any], dict[str, list[str]]]:
     return data, by_country
 
 
+# Enums (no serialization issues)
 class RateType(Enum):
     """Rate types for reservations."""
 
@@ -84,8 +86,9 @@ class CardHolderType(Enum):
     SAME_AS_PASSENGER = 3
 
 
-class City(ApiModel):
-    """City information."""
+# Shared Data Models
+class CityBase(SharedModel):
+    """Base city information."""
 
     city_name: str
     country_code: str = Field(..., description="ISO 3166-1 alpha-2 country code")
@@ -126,10 +129,8 @@ class City(ApiModel):
         )
 
 
-class Address(ApiModel):
-    """
-    Address information.
-    """
+class AddressBase(SharedModel):
+    """Base address information."""
 
     google_geocode: Optional[dict[str, Any]] = Field(
         default=None,
@@ -139,7 +140,7 @@ class Address(ApiModel):
             "You must use geocode_response['results'][0] to get the result object."
         ),
     )
-    city: Optional[City] = Field(
+    city: Optional["CityBase"] = Field(
         default=None, description="Use only if google_geocode not available"
     )
     district: Optional[str] = Field(default=None, description="e.g., Manhattan")
@@ -180,8 +181,8 @@ class Address(ApiModel):
         return self
 
 
-class Airport(ApiModel):
-    """Airport information."""
+class AirportBase(SharedModel):
+    """Base airport information."""
 
     iata_code: str = Field(..., description="3-letter IATA code, e.g., JFK")
     country_code: Optional[str] = Field(default=None, description="ISO 3166-1 alpha-2")
@@ -196,7 +197,7 @@ class Airport(ApiModel):
     )
     flight_number: Optional[str] = Field(default=None, description="e.g., UA1234")
     terminal: Optional[str] = Field(default=None, description="e.g., 7")
-    arriving_from_city: Optional[City] = None
+    arriving_from_city: Optional["CityBase"] = None
     meet_greet: Optional[int] = Field(
         default=None,
         description="Meet & greet option ID. Leave empty on price request to see options.",
@@ -227,12 +228,12 @@ class Airport(ApiModel):
         return self
 
 
-class Location(ApiModel):
-    """Location (address or airport)."""
+class LocationBase(SharedModel):
+    """Base location (address or airport)."""
 
     type: LocationType
-    address: Optional[Address] = None
-    airport: Optional[Airport] = None
+    address: Optional["AddressBase"] = None
+    airport: Optional["AirportBase"] = None
 
     @model_validator(mode="after")
     def validate_location(self) -> Self:
@@ -245,15 +246,15 @@ class Location(ApiModel):
         return self
 
 
-class Stop(ApiModel):
-    """Stop information."""
+class StopBase(SharedModel):
+    """Base stop information."""
 
     description: str = Field(..., description="Address, place name, or comment")
     is_en_route: bool = Field(..., description="True if stop is en-route")
 
 
-class Account(ApiModel):
-    """Travel agency or corporate account info."""
+class AccountBase(SharedModel):
+    """Base travel agency or corporate account info."""
 
     id: str = Field(..., description="TA or corporate account number")
     department: Optional[str] = None
@@ -263,8 +264,8 @@ class Account(ApiModel):
     booker_phone: Optional[str] = Field(default=None, description="E164 format")
 
 
-class Passenger(ApiModel):
-    """Passenger information."""
+class PassengerBase(SharedModel):
+    """Base passenger information."""
 
     first_name: str
     last_name: str
@@ -272,15 +273,15 @@ class Passenger(ApiModel):
     phone: str = Field(..., description="E164 format recommended")
 
 
-class Reward(ApiModel):
-    """Reward account information."""
+class RewardBase(SharedModel):
+    """Base reward account information."""
 
     type: RewardType
     value: str = Field(..., description="Reward account number")
 
 
-class CreditCard(ApiModel):
-    """Credit card information."""
+class CreditCardBase(SharedModel):
+    """Base credit card information."""
 
     number: str
     expiration: str = Field(..., description="MM/YY format")
@@ -293,8 +294,8 @@ class CreditCard(ApiModel):
     )
 
 
-class BreakdownItem(ApiModel):
-    """Price breakdown item."""
+class BreakdownItemBase(SharedModel):
+    """Base price breakdown item."""
 
     name: str
     value: float
@@ -303,28 +304,28 @@ class BreakdownItem(ApiModel):
     )
 
 
-class MeetGreetAdditional(ApiModel):
-    """Additional meet & greet charges."""
+class MeetGreetAdditionalBase(SharedModel):
+    """Base additional meet & greet charges."""
 
     name: str
     price: float
 
 
-class MeetGreet(ApiModel):
-    """Meet & greet option."""
+class MeetGreetBase(SharedModel):
+    """Base meet & greet option."""
 
     id: int
     name: str
     base_price: float
     instructions: str
-    additional: list[MeetGreetAdditional]
+    additional: list["MeetGreetAdditionalBase"]
     total_price: float
     fees: float
     reservation_price: float
 
 
-class Price(ApiModel):
-    """Car class pricing information."""
+class PriceBase(SharedModel):
+    """Base car class pricing information."""
 
     car_class: str
     car_description: str
@@ -336,11 +337,11 @@ class Price(ApiModel):
     image_256: str = Field(alias="image256")
     image_512: str = Field(alias="image512")
     default_meet_greet: Optional[int] = None
-    meet_greets: list[MeetGreet] = Field(default_factory=list)
+    meet_greets: list["MeetGreetBase"] = Field(default_factory=list)
 
 
-class Reservation(ApiModel):
-    """Basic reservation information."""
+class ReservationBase(SharedModel):
+    """Base reservation information."""
 
     confirmation_number: str
     is_archive: bool
@@ -356,13 +357,12 @@ class Reservation(ApiModel):
     status: Optional[ReservationStatus] = None
 
 
-class EditableReservationRequest(ApiModel):
+class EditableReservationRequestBase(SharedModel):
     """
-    Editable reservation for modifications.
+    Base editable reservation for modifications.
 
     Note: API documentation inconsistency - credit_card marked as required in model
     but omitted in edit examples. Making it optional as edit requests may not need it.
-    TODO: Clarify with API author when credit_card is actually required.
     """
 
     confirmation: str
@@ -370,8 +370,8 @@ class EditableReservationRequest(ApiModel):
     rate_type: Optional[RateType] = None
     pickup_date: Optional[str] = Field(default=None, description="MM/dd/yyyy format")
     pickup_time: Optional[str] = Field(default=None, description="hh:mm tt format")
-    stops: Optional[list[Stop]] = None
-    credit_card: Optional[CreditCard] = Field(
+    stops: Optional[list["StopBase"]] = None
+    credit_card: Optional["CreditCardBase"] = Field(
         default=None,
         description="Conditionally required - unclear from API docs when exactly",
     )
@@ -382,140 +382,3 @@ class EditableReservationRequest(ApiModel):
     boosters: Optional[int] = None
     infants: Optional[int] = None
     other: Optional[str] = Field(default=None, description="Other changes not listed")
-
-
-# Request/Response Models
-
-
-class PriceRequest(ApiModel):
-    """Request for getting prices."""
-
-    rate_type: RateType
-    date_time: str = Field(..., description="MM/dd/yyyy hh:mm tt format")
-    pickup: Location
-    dropoff: Location
-    hours: Optional[int] = Field(default=None, description="For hourly rate_type only")
-    passengers: int
-    luggage: int
-    stops: Optional[list[Stop]] = None
-    account: Optional[Account] = Field(
-        default=None, description="TAs must provide for commission"
-    )
-    passenger: Optional[Passenger] = None
-    rewards: Optional[list[Reward]] = None
-    car_class_code: Optional[str] = Field(
-        default=None, description="e.g., 'SD' for specific car class"
-    )
-    pets: Optional[int] = None
-    car_seats: Optional[int] = None
-    boosters: Optional[int] = None
-    infants: Optional[int] = None
-    customer_comment: Optional[str] = None
-
-
-class PriceResponse(ApiModel):
-    """Response from get prices."""
-
-    token: str
-    prices: list[Price]
-
-
-class DetailsRequest(ApiModel):
-    """Request for setting reservation details."""
-
-    token: str
-    car_class_code: Optional[str] = None
-    pickup: Optional[Location] = None
-    dropoff: Optional[Location] = None
-    stops: Optional[list[Stop]] = None
-    account: Optional[Account] = None
-    passenger: Optional[Passenger] = None
-    rewards: Optional[list[Reward]] = None
-    pets: Optional[int] = None
-    car_seats: Optional[int] = None
-    boosters: Optional[int] = None
-    infants: Optional[int] = None
-    customer_comment: Optional[str] = None
-    ta_fee: Optional[float] = Field(
-        default=None, description="For Travel Agencies - additional fee in USD"
-    )
-
-
-class DetailsResponse(ApiModel):
-    """Response from set details."""
-
-    price: float
-    breakdown: list[BreakdownItem]
-
-
-class BookRequest(ApiModel):
-    """Request for booking reservation."""
-
-    token: str
-    promo: Optional[str] = None
-    method: Optional[str] = Field(
-        default=None, description="'charge' for charge accounts"
-    )
-    credit_card: Optional[CreditCard] = None
-
-    @model_validator(mode="after")
-    def validate_book_request(self) -> Self:
-        """Validate that either method or credit_card is provided."""
-        if not self.method and not self.credit_card:
-            raise ValueError("Either method='charge' or credit_card must be provided")
-
-        return self
-
-
-class BookResponse(ApiModel):
-    """Response from book reservation."""
-
-    reservation_id: str
-
-
-class ListReservationsRequest(ApiModel):
-    """Request for listing reservations."""
-
-    is_archive: bool = False
-
-
-class ListReservationsResponse(ApiModel):
-    """Response from list reservations."""
-
-    success: bool
-    reservations: list[Reservation] = Field(default_factory=list)
-    error: Optional[str] = None
-
-
-class GetReservationRequest(ApiModel):
-    """Request for getting reservation details."""
-
-    confirmation: str
-
-
-class GetReservationResponse(ApiModel):
-    """Response from get reservation."""
-
-    reservation: EditableReservationRequest
-    is_editable: bool
-    status: Optional[ReservationStatus] = None
-    is_cancellation_pending: bool
-    car_description: Optional[str] = None
-    cancellation_policy: Optional[str] = None
-    pickup_type: LocationType
-    pickup_description: str
-    dropoff_type: LocationType
-    dropoff_description: str
-    additional_services: Optional[str] = None
-    payment_method: Optional[str] = None
-    breakdown: list[BreakdownItem] = Field(default_factory=list)
-    passenger_name: Optional[str] = None
-    evoucher_url: Optional[str] = None
-    receipt_url: Optional[str] = None
-    pending_changes: list[list[str]] = Field(default_factory=list)
-
-
-class EditReservationResponse(ApiModel):
-    """Response from edit reservation."""
-
-    success: bool

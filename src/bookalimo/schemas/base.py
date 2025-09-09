@@ -24,30 +24,58 @@ def _deep_to_snake(obj: Any) -> Any:
     return obj
 
 
-class ApiModel(BaseModel):
+class SharedModel(BaseModel):
     """
-    Base model for all Book-A-Limo API models.
+    Base model for shared data structures used in both API requests and responses.
 
-    Provides automatic field name conversion between Python snake_case
-    and API camelCase, plus proper enum handling.
-
-    Serialization options (via `model_dump(..., context=...)`):
-      - context["enum_out"]: "value" (default) or "name"
-      - context["case"]: "camel" (default) or "snake"
-      - context["snake_case"]: True/False (alias for case="snake"/"camel")
+    Provides field name conversion but no serialization opinions - subclasses decide
+    whether to serialize to camelCase (for requests) or snake_case (for responses).
     """
 
     model_config = ConfigDict(
         # Auto-generate camelCase aliases from snake_case field names
         alias_generator=to_camel,
-        # Accept both alias (camel) and name (snake) on input (v2.11+)
+        # Accept both alias (camel) and name (snake) on input
         validate_by_alias=True,
-        validate_by_name=True,  # replaces populate_by_name
-        # Default to using aliases when dumping (wire format)
-        serialize_by_alias=True,
+        validate_by_name=True,
+        # Don't set serialize_by_alias - let subclasses decide
         # Enums dumping handled in model_serializer
         use_enum_values=False,
         # Ignore unknown keys from the API
+        extra="ignore",
+    )
+
+
+class RequestModel(SharedModel):
+    """
+    Base model for API request models.
+
+    Serializes to camelCase by default (what the Book-A-Limo API expects).
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+        serialize_by_alias=True,  # Serialize to camelCase for API requests
+        use_enum_values=False,
+        extra="ignore",
+    )
+
+
+class ResponseModel(SharedModel):
+    """
+    Base model for API response models.
+
+    Serializes to snake_case by default (better DX for Python developers).
+    """
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+        serialize_by_alias=False,  # Serialize to snake_case for Python developers
+        use_enum_values=False,
         extra="ignore",
     )
 

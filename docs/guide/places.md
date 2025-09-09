@@ -71,7 +71,7 @@ async with AsyncBookalimo(
     from bookalimo.schemas.places import (
         GeocodingRequest,
     )
-    from bookalimo.schemas.booking import (
+    from bookalimo.schemas import (
         RateType,
         Location,
         LocationType,
@@ -104,7 +104,7 @@ async with AsyncBookalimo(
     )
 
     # Airport dropoff (no geocoding needed for airports)
-    from bookalimo.schemas.booking import (
+    from bookalimo.schemas import (
         Airport,
     )
 

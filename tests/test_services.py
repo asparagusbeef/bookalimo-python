@@ -5,12 +5,13 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from bookalimo.exceptions import BookalimoRequestError
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     BookRequest,
     BookResponse,
     DetailsRequest,
     DetailsResponse,
     EditableReservationRequest,
+    EditableReservationRequestResponse,
     EditReservationResponse,
     GetReservationRequest,
     GetReservationResponse,
@@ -292,7 +293,7 @@ class TestAsyncReservationsService:
     async def test_get_reservation(self, reservations_service):
         """Test get reservation details."""
         mock_response = GetReservationResponse(
-            reservation=EditableReservationRequest(confirmation="TEST123"),
+            reservation=EditableReservationRequestResponse(confirmation="TEST123"),
             is_editable=True,
             is_cancellation_pending=False,
             pickup_type=LocationType.ADDRESS,

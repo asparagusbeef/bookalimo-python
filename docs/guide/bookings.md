@@ -13,7 +13,7 @@ Every booking follows three steps:
 ## Basic Example
 
 ```python
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     RateType,
     CreditCard,
 )

@@ -3,11 +3,11 @@
 import pytest
 from pydantic import ValidationError
 
-from bookalimo.schemas.base import ApiModel
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     Address,
     Airport,
     BookRequest,
+    CarClassPrice,
     City,
     CreditCard,
     EditableReservationRequest,
@@ -322,9 +322,7 @@ class TestPriceResponse:
 
     def test_price_response_with_prices(self):
         """Test price response with price data."""
-        from bookalimo.schemas.booking import Price
-
-        price = Price(
+        price_data = CarClassPrice(
             car_class="SEDAN",
             car_description="Standard Sedan",
             max_passengers=4,
@@ -337,7 +335,7 @@ class TestPriceResponse:
             meet_greets=[],
         )
 
-        response = PriceResponse(token="test-token-456", prices=[price])
+        response = PriceResponse(token="test-token-456", prices=[price_data])
 
         assert response.token == "test-token-456"
         assert len(response.prices) == 1
@@ -505,10 +503,11 @@ class TestSchemaValidation:
         assert "customerComment" in dumped
         assert dumped["customerComment"] == "Valid comment"
 
-    def test_api_model_base_functionality(self):
-        """Test ApiModel base class functionality."""
+    def test_shared_model_base_functionality(self):
+        """Test SharedModel base class functionality."""
+        from bookalimo.schemas.base import SharedModel
 
-        class TestModel(ApiModel):
+        class TestModel(SharedModel):
             name: str
             value: int = 10
 

@@ -11,7 +11,7 @@ from pydantic import ValidationError
 
 from bookalimo import AsyncBookalimo, Bookalimo
 from bookalimo.exceptions import BookalimoError, BookalimoHTTPError
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     Address,
     Airport,
     City,

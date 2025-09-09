@@ -3,7 +3,7 @@
 from typing import Any, Optional
 
 from ..exceptions import BookalimoRequestError
-from ..schemas.booking import (
+from ..schemas import (
     BookRequest,
     BookResponse,
     CreditCard,

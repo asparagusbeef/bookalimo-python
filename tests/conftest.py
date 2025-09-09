@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from bookalimo import AsyncBookalimo, Bookalimo
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     CreditCard,
     Location,
     LocationType,
@@ -90,7 +90,7 @@ def skip_if_no_real_credentials(real_bookalimo_credentials):
 @pytest.fixture
 def sample_pickup_location() -> Location:
     """Sample pickup location for testing."""
-    from bookalimo.schemas.booking import Address, City
+    from bookalimo.schemas import Address, City
 
     return Location(
         type=LocationType.ADDRESS,
@@ -112,7 +112,7 @@ def sample_pickup_location() -> Location:
 @pytest.fixture
 def sample_dropoff_location() -> Location:
     """Sample dropoff location for testing."""
-    from bookalimo.schemas.booking import Airport
+    from bookalimo.schemas import Airport
 
     return Location(
         type=LocationType.AIRPORT,
@@ -374,7 +374,7 @@ def create_test_address_location(
     building: Optional[str] = None,
 ) -> Location:
     """Helper to create test address locations with proper structure."""
-    from bookalimo.schemas.booking import Address, City
+    from bookalimo.schemas import Address, City
 
     return Location(
         type=LocationType.ADDRESS,
@@ -397,7 +397,7 @@ def create_test_airport_location(
     iata_code: str = "TST", country: str = "US", state: str = "NY"
 ) -> Location:
     """Helper to create test airport locations with proper structure."""
-    from bookalimo.schemas.booking import Airport
+    from bookalimo.schemas import Airport
 
     return Location(
         type=LocationType.AIRPORT,
@@ -408,7 +408,7 @@ def create_test_airport_location(
 @pytest.fixture
 def real_pickup_location() -> Location:
     """Real pickup location for API testing."""
-    from bookalimo.schemas.booking import Address, City
+    from bookalimo.schemas import Address, City
 
     return Location(
         type=LocationType.ADDRESS,
@@ -429,7 +429,7 @@ def real_pickup_location() -> Location:
 @pytest.fixture
 def real_dropoff_location() -> Location:
     """Real dropoff location for API testing."""
-    from bookalimo.schemas.booking import Airport
+    from bookalimo.schemas import Airport
 
     return Location(
         type=LocationType.AIRPORT,

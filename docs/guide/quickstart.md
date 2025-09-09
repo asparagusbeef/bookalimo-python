@@ -42,7 +42,7 @@ from bookalimo import (
 from bookalimo.transport.auth import (
     Credentials,
 )
-from bookalimo.schemas.booking import (
+from bookalimo.schemas import (
     RateType,
     Location,
     LocationType,
