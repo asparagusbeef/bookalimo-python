@@ -11,12 +11,10 @@ from typing_extensions import ParamSpec
 
 from ...exceptions import BookalimoError
 from ...logging import get_logger
+from ...schemas.places import FieldMaskInput
 from ...schemas.places import google as models
 from .common import (
     DEFAULT_PLACE_FIELDS,
-    DEFAULT_PLACE_LIST_FIELDS,
-    Fields,
-    PlaceListFields,
     build_get_place_request,
     build_search_request_params,
     derive_effective_query,
@@ -127,7 +125,7 @@ class GooglePlaces:
         query: Optional[str] = None,
         *,
         request: Optional[models.SearchTextRequest] = None,
-        fields: PlaceListFields = DEFAULT_PLACE_LIST_FIELDS,
+        fields: FieldMaskInput = DEFAULT_PLACE_FIELDS,
         **kwargs: Any,
     ) -> list[models.Place]:
         """
@@ -144,7 +142,7 @@ class GooglePlaces:
             ValueError: If neither query nor request is provided, or if both are provided.
         """
         request_params = build_search_request_params(query, request, **kwargs)
-        metadata = mask_header(fields)
+        metadata = mask_header(fields, prefix="places")
 
         try:
             protos = self.transport.search_text(
@@ -167,7 +165,7 @@ class GooglePlaces:
         place_id: Optional[str] = None,
         *,
         request: Optional[models.GetPlaceRequest] = None,
-        fields: Fields = DEFAULT_PLACE_FIELDS,
+        fields: FieldMaskInput = DEFAULT_PLACE_FIELDS,
     ) -> Optional[models.Place]:
         """
         Get details for a specific place.

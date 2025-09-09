@@ -78,7 +78,15 @@ customer = Credentials.create("user@email.com", "password", is_customer=True)
 import asyncio
 from bookalimo import AsyncBookalimo
 from bookalimo.transport.auth import Credentials
-from bookalimo.schemas.booking import RateType, Location, LocationType, Address, City, Airport
+from bookalimo.schemas.booking import (
+    RateType,
+    Location,
+    LocationType,
+    Address,
+    City,
+    Airport,
+)
+
 
 async def book_ride():
     credentials = Credentials.create("your_id", "your_password", is_customer=False)
@@ -87,14 +95,11 @@ async def book_ride():
         type=LocationType.ADDRESS,
         address=Address(
             place_name="Empire State Building",
-            city=City(city_name="New York", country_code="US", state_code="NY")
-        )
+            city=City(city_name="New York", country_code="US", state_code="NY"),
+        ),
     )
 
-    dropoff = Location(
-        type=LocationType.AIRPORT,
-        airport=Airport(iata_code="JFK")
-    )
+    dropoff = Location(type=LocationType.AIRPORT, airport=Airport(iata_code="JFK"))
 
     async with AsyncBookalimo(credentials=credentials) as client:
         # 1) Get pricing
@@ -104,15 +109,15 @@ async def book_ride():
             pickup=pickup,
             dropoff=dropoff,
             passengers=2,
-            luggage=2
+            luggage=2,
         )
 
         # 2) Book reservation
         booking = await client.reservations.book(
-            token=quote.token,
-            method="charge"  # or credit_card=CreditCard(...)
+            token=quote.token, method="charge"  # or credit_card=CreditCard(...)
         )
         return booking.reservation_id
+
 
 confirmation = asyncio.run(book_ride())
 ```
@@ -126,7 +131,7 @@ from bookalimo.transport.auth import Credentials
 credentials = Credentials.create("your_id", "your_password", is_customer=False)
 
 with Bookalimo(credentials=credentials) as client:
-    quote = client.pricing.quote(... )
+    quote = client.pricing.quote(...)
     booking = client.reservations.book(token=quote.token, method="charge")
 ```
 
@@ -172,18 +177,14 @@ address_location = Location(
     address=Address(
         place_name="Empire State Building",
         street_name="350 5th Ave",
-        city=City(city_name="New York", country_code="US", state_code="NY")
-    )
+        city=City(city_name="New York", country_code="US", state_code="NY"),
+    ),
 )
 
 # Airport with flight details
 airport_location = Location(
     type=LocationType.AIRPORT,
-    airport=Airport(
-        iata_code="JFK",
-        flight_number="UA123",
-        terminal="4"
-    )
+    airport=Airport(iata_code="JFK", flight_number="UA123", terminal="4"),
 )
 ```
 
@@ -191,8 +192,7 @@ airport_location = Location(
 
 ```python
 async with AsyncBookalimo(
-    credentials=credentials,
-    google_places_api_key="your-google-places-key"
+    credentials=credentials, google_places_api_key="your-google-places-key"
 ) as client:
     # Search locations
     results = await client.places.search("Hilton Miami Beach")
@@ -217,15 +217,16 @@ async with AsyncBookalimo(
     top_result_geocode = await client.places.geocode(place_id=top_result_place_id)
 
     # By lat-lng
-    top_result_geocode = await client.places.geocode(lat=top_result.lat, lng=top_result.lng)
+    top_result_geocode = await client.places.geocode(
+        lat=top_result.lat, lng=top_result.lng
+    )
 
     # Convert to booking location
     location = Location(
         type=LocationType.ADDRESS,
         address=Address(
-            google_geocode=top_result_geocode,
-            place_name=top_result.formatted_address
-        )
+            google_geocode=top_result_geocode, place_name=top_result.formatted_address
+        ),
     )
 ```
 
@@ -242,24 +243,19 @@ details = await client.reservations.get("ABC123")
 
 # Modify reservation
 edit_result = await client.reservations.edit(
-    confirmation="ABC123",
-    passengers=3,
-    pickup_date="12/26/2024"
+    confirmation="ABC123", passengers=3, pickup_date="12/26/2024"
 )
 
 # Cancel reservation
-cancel_result = await client.reservations.edit(
-    confirmation="ABC123",
-    is_cancel=True
-)
+cancel_result = await client.reservations.edit(confirmation="ABC123", is_cancel=True)
 ```
 
 ## Error Handling
 
 ```python
 from bookalimo.exceptions import (
-    BookalimoError,            # base SDK error
-    BookalimoHTTPError,        # HTTP/transport errors
+    BookalimoError,  # base SDK error
+    BookalimoHTTPError,  # HTTP/transport errors
     BookalimoValidationError,  # input/schema validation errors
 )
 

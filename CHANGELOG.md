@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.1] - 2025-09-08
 
 ### Added
+- **Schemas**: New `FieldMaskInput` type for flexible field mask validation
 - **Google Places**: `autocomplete()` now accepts either a string input or a `AutocompletePlacesRequest` object
 - **Google Places**: New `resolve_airport()` method for advanced airport resolution with confidence scoring
 - **Google Places**: Support for `SearchTextRequest` objects in `search()` method for advanced filtering
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Removed `iata_code` field from `Place` model (use `resolve_airport()` instead)
 - **Google Places**: Enhanced `search()` method now accepts either simple queries or `SearchTextRequest` objects
 - **Google Places**: Updated `get()` method to accept optional `GetPlaceRequest` objects instead of raw place IDs for better flexibility
+- **Google Places**: Removed the restrictive `Fields` and `PlaceListFields` types and replaced them with `FieldMaskInput` and `FieldPath` for better flexibility
 - **Schemas**: `PlaceType` converted to string enum (`StrEnum`)
 - **Schemas**: `PriceLevel` and `BusinessStatus` converted to integer enums (`IntEnum`)
 - **Schemas**: Enhanced `AddressDescriptor` model with detailed landmark and area information

@@ -1,6 +1,7 @@
 """Google Places API schemas."""
 
 from .common import AddressDescriptor
+from .field_mask import FieldMaskInput, FieldPath, compile_field_mask
 from .google import (
     AutocompletePlacesRequest,
     AutocompletePlacesResponse,
@@ -47,4 +48,7 @@ __all__ = [
     "ResolvedAirport",
     "AddressDescriptor",
     "AddressComponent",
+    "FieldMaskInput",
+    "FieldPath",
+    "compile_field_mask",
 ]
