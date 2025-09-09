@@ -134,19 +134,19 @@ Geographic restriction to limit search results. Exactly one of `rectangle` or `c
 
 Similar to `LocationBias` but enforces hard boundaries rather than preferences.
 
-### SearchTextLocationBias
+### LocationBias
 
-::: bookalimo.schemas.places.SearchTextLocationBias
+::: bookalimo.schemas.places.LocationBias
 
 Geographic bias specific to SearchTextRequest. Supports both rectangle and circle constraints.
 
 **Usage:**
 ```python
 # Rectangle bias
-bias = SearchTextLocationBias(rectangle=Viewport(high=..., low=...))
+bias = LocationBias(rectangle=Viewport(high=..., low=...))
 
 # Circle bias
-bias = SearchTextLocationBias(circle=Circle(center=..., radius_meters=1000))
+bias = LocationBias(circle=Circle(center=..., radius_meters=1000))
 ```
 
 ### SearchTextLocationRestriction

@@ -217,7 +217,7 @@ except BookalimoError as e:
 
 ## Version Information
 
-This documentation covers Bookalimo Python SDK v1.0.0. For the latest version and updates, see the [changelog](../changelog.md).
+This documentation covers Bookalimo Python SDK v1.0.0. For the latest version and updates, see the [changelog](./CHANGELOG.md).
 
 ## Support
 

@@ -381,13 +381,13 @@ pois = await places.search("Empire State Building")
 
 # Advanced search with geographic restrictions
 from bookalimo.schemas.places import (
-    SearchTextRequest, SearchTextLocationBias, Circle, LatLng
+    SearchTextRequest, LocationBias, Circle, LatLng
 )
 
 restaurant_request = SearchTextRequest(
     text_query="restaurants in Times Square",
     included_type="restaurant",
-    location_bias=SearchTextLocationBias(
+    location_bias=LocationBias(
         circle=Circle(
             center=LatLng(latitude=40.7580, longitude=-73.9855),  # Times Square
             radius_meters=500
@@ -416,7 +416,7 @@ The `SearchTextRequest` model provides comprehensive search capabilities:
 ```python
 from bookalimo.schemas.places import (
     SearchTextRequest, RankPreference, EVOptions, RoutingParameters,
-    SearchTextLocationRestriction, Viewport, LatLng, PriceLevel
+    LocationRestriction, Viewport, LatLng, PriceLevel
 )
 
 # Complex search with all features
@@ -433,7 +433,7 @@ advanced_request = SearchTextRequest(
     price_levels=[PriceLevel.PRICE_LEVEL_FREE, PriceLevel.PRICE_LEVEL_INEXPENSIVE],
 
     # Geographic restrictions
-    location_restriction=SearchTextLocationRestriction(
+    location_restriction=LocationRestriction(
         rectangle=Viewport(
             high=LatLng(latitude=40.8, longitude=-73.9),
             low=LatLng(latitude=40.7, longitude=-74.0)

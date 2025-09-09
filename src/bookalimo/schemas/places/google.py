@@ -244,17 +244,6 @@ class SearchAlongRouteParameters(BaseModel):
     polyline: Polyline = Field(..., description="Route polyline")
 
 
-class SearchTextLocationBias(BaseModel):
-    """
-    Location bias for SearchTextRequest - allows both rectangle and circle.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    rectangle: Optional[Viewport] = None
-    circle: Optional[Circle] = None
-
-
 class SearchTextLocationRestriction(BaseModel):
     """
     Location restriction for SearchTextRequest - allows only rectangle.
@@ -776,7 +765,7 @@ class SearchTextRequest(BaseModel):
     )
 
     # Location constraints (mutually exclusive)
-    location_bias: Optional[SearchTextLocationBias] = Field(
+    location_bias: Optional[LocationBias] = Field(
         default=None,
         description="The region to search. This location serves as a bias.",
     )
