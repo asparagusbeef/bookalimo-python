@@ -27,7 +27,10 @@ from bookalimo.exceptions import (
 try:
     async with AsyncBookalimo(credentials=creds) as client:
         quote = await client.pricing.quote(...)
-        booking = await client.reservations.book(token=quote.token, ...)
+        booking = await client.reservations.book(
+            token=quote.token,
+            ...,
+        )
 
 except BookalimoValidationError as e:
     print(f"Invalid input: {e.message}")

@@ -62,7 +62,11 @@ plugins:
 
 markdown_extensions:
   - admonition
-  - codehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed:

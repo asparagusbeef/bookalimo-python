@@ -13,7 +13,10 @@ Every booking follows three steps:
 ## Basic Example
 
 ```python
-from bookalimo.schemas.booking import RateType, CreditCard
+from bookalimo.schemas.booking import (
+    RateType,
+    CreditCard,
+)
 
 async with AsyncBookalimo(credentials=creds) as client:
     # 1. Get pricing
@@ -65,12 +68,18 @@ async with AsyncBookalimo(credentials=creds) as client:
 
 **Charge Account** (agencies/corporate):
 ```python
-booking = await client.reservations.book(token=quote.token, method="charge")
+booking = await client.reservations.book(
+    token=quote.token,
+    method="charge",
+)
 ```
 
 **Credit Card**:
 ```python
-booking = await client.reservations.book(token=quote.token, credit_card=card)
+booking = await client.reservations.book(
+    token=quote.token,
+    credit_card=card,
+)
 ```
 
 ## Date/Time Format

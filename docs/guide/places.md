@@ -13,7 +13,8 @@ Provide your Google Places API key:
 ```python
 # Via constructor
 client = AsyncBookalimo(
-    credentials=creds, google_places_api_key="YOUR_GOOGLE_PLACES_KEY"
+    credentials=creds,
+    google_places_api_key="YOUR_GOOGLE_PLACES_KEY",
 )
 
 # Or via environment variable
@@ -27,7 +28,8 @@ client = AsyncBookalimo(credentials=creds)
 
 ```python
 async with AsyncBookalimo(
-    credentials=creds, google_places_api_key="YOUR_KEY"
+    credentials=creds,
+    google_places_api_key="YOUR_KEY",
 ) as client:
     # Search for places
     places = await client.places.search("Empire State Building")
@@ -40,9 +42,13 @@ async with AsyncBookalimo(
     suggestions = await client.places.autocomplete(input="Empire State")
 
     # Geocode addresses
-    from bookalimo.schemas.places import GeocodingRequest
+    from bookalimo.schemas.places import (
+        GeocodingRequest,
+    )
 
-    geo = await client.places.geocode(GeocodingRequest(address="350 5th Ave, New York"))
+    geo = await client.places.geocode(
+        GeocodingRequest(address="350 5th Ave, New York")
+    )
 
     # Resolve airports with confidence scoring
     airports = await client.places.resolve_airport(
@@ -59,14 +65,26 @@ Here's how to use geocoding for address validation in a real booking scenario:
 
 ```python
 async with AsyncBookalimo(
-    credentials=creds, google_places_api_key="YOUR_KEY"
+    credentials=creds,
+    google_places_api_key="YOUR_KEY",
 ) as client:
-    from bookalimo.schemas.places import GeocodingRequest
-    from bookalimo.schemas.booking import RateType, Location, LocationType, Address
+    from bookalimo.schemas.places import (
+        GeocodingRequest,
+    )
+    from bookalimo.schemas.booking import (
+        RateType,
+        Location,
+        LocationType,
+        Address,
+    )
 
     # Step 1: Autocomplete to find place - user enters "Hilton Cabana"
-    autocomplete_results = await client.places.autocomplete(input="Hilton Cabana")
-    top_suggestion = autocomplete_results.suggestions[0].place_prediction
+    autocomplete_results = await client.places.autocomplete(
+        input="Hilton Cabana"
+    )
+    top_suggestion = autocomplete_results.suggestions[
+        0
+    ].place_prediction
 
     # Step 2: Geocode the selected place for precise coordinates
     geocode_result = await client.places.geocode(
@@ -86,11 +104,15 @@ async with AsyncBookalimo(
     )
 
     # Airport dropoff (no geocoding needed for airports)
-    from bookalimo.schemas.booking import Airport
+    from bookalimo.schemas.booking import (
+        Airport,
+    )
 
     dropoff = Location(
         type=LocationType.AIRPORT,
-        airport=Airport(iata_code="JFK"),  # 3-letter IATA code - validated
+        airport=Airport(
+            iata_code="JFK"
+        ),  # 3-letter IATA code - validated
     )
 
     # Get pricing with geocoded pickup
@@ -104,7 +126,10 @@ async with AsyncBookalimo(
     )
 
     # Complete booking
-    booking = await client.reservations.book(token=quote.token, method="charge")
+    booking = await client.reservations.book(
+        token=quote.token,
+        method="charge",
+    )
     print(f"Booking confirmed: {booking.reservation_id}")
 ```
 
@@ -114,15 +139,21 @@ The `resolve_airport()` method provides intelligent airport matching:
 
 ```python
 # Find airports by text
-airports = await client.places.resolve_airport(query="kennedy airport new york")
+airports = await client.places.resolve_airport(
+    query="kennedy airport new york"
+)
 
 # Or resolve from existing place
 place_result = await client.places.search("Eiffel Tower")
-airports = await client.places.resolve_airport(place_id=place_result[0].google_place.id)
+airports = await client.places.resolve_airport(
+    place_id=place_result[0].google_place.id
+)
 
 # Results include confidence scores
 for airport in airports:
-    print(f"{airport.name} ({airport.iata_code}) - confidence: {airport.confidence}")
+    print(
+        f"{airport.name} ({airport.iata_code}) - confidence: {airport.confidence}"
+    )
 ```
 
 ### Algorithm Overview
@@ -153,18 +184,21 @@ airports = await client.places.resolve_airport(query="kennedy airport")
 
 # Proximity-only search (find closest airports to Eiffel Tower)
 airports = await client.places.resolve_airport(
-    query="eiffel tower", text_weight=0.0  # Pure proximity
+    query="eiffel tower",
+    text_weight=0.0,  # Pure proximity
 )
 
 # Mixed scoring (blend text + proximity)
 airports = await client.places.resolve_airport(
-    query="paris airport", text_weight=0.7  # 70% text, 30% proximity
+    query="paris airport",
+    text_weight=0.7,  # 70% text, 30% proximity
 )
 
 # API cost optimization (use existing Place objects)
 eiffel_places = await client.places.search("Eiffel Tower")
 airports = await client.places.resolve_airport(
-    places=eiffel_places, text_weight=0.0  # Skip additional API call
+    places=eiffel_places,
+    text_weight=0.0,  # Skip additional API call
 )
 ```
 
@@ -181,11 +215,19 @@ places = await client.places.search("restaurants")
 
 # String list
 places = await client.places.search(
-    "restaurants", fields=["display_name", "rating", "formatted_address"]
+    "restaurants",
+    fields=[
+        "display_name",
+        "rating",
+        "formatted_address",
+    ],
 )
 
 # Comma-separated string
-places = await client.places.search("restaurants", fields="display_name,rating")
+places = await client.places.search(
+    "restaurants",
+    fields="display_name,rating",
+)
 
 # All fields (expensive)
 places = await client.places.search("restaurants", fields="*")
@@ -196,16 +238,28 @@ places = await client.places.search("restaurants", fields="*")
 Use the `F` object for type-safe field paths:
 
 ```python
-from bookalimo.schemas.places import F
+from bookalimo.schemas.places import (
+    F,
+)
 
 # Basic fields
 places = await client.places.search(
-    "restaurants", fields=[F.display_name, F.formatted_address, F.rating]
+    "restaurants",
+    fields=[
+        F.display_name,
+        F.formatted_address,
+        F.rating,
+    ],
 )
 
 # Nested fields
 places = await client.places.search(
-    "restaurants", fields=[F.reviews.text, F.reviews.rating, F.photos.name]
+    "restaurants",
+    fields=[
+        F.reviews.text,
+        F.reviews.rating,
+        F.photos.name,
+    ],
 )
 
 # Complex nested paths
@@ -224,17 +278,34 @@ places = await client.places.search(
 `compile_field_mask()` accepts multiple input formats for maximum flexibility:
 
 ```python
-from bookalimo.schemas.places import compile_field_mask, F, FieldPath
+from bookalimo.schemas.places import (
+    compile_field_mask,
+    F,
+    FieldPath,
+)
 
 # String formats
 fields = "display_name,formatted_address,rating"  # Comma-separated
-fields = ["display_name", "rating"]  # List of strings
+fields = [
+    "display_name",
+    "rating",
+]  # List of strings
 fields = "display_name"  # Single field
 
 # Object formats
-fields = [F.display_name, F.rating]  # F objects
-fields = [FieldPath("display_name"), FieldPath("reviews.text")]  # FieldPath objects
-fields = [F.display_name, "rating", FieldPath("location")]  # Mixed formats
+fields = [
+    F.display_name,
+    F.rating,
+]  # F objects
+fields = [
+    FieldPath("display_name"),
+    FieldPath("reviews.text"),
+]  # FieldPath objects
+fields = [
+    F.display_name,
+    "rating",
+    FieldPath("location"),
+]  # Mixed formats
 ```
 
 ### Advanced Field Mask Compilation
@@ -242,7 +313,10 @@ fields = [F.display_name, "rating", FieldPath("location")]  # Mixed formats
 > **Note:** The `bookalimo.schemas.places.GooglePlace` model doesn't cover 100% of the Google Places API `Place` object. For custom fields beyond the default schema, use the options below.
 
 ```python
-from bookalimo.schemas.places import compile_field_mask, build_field_tree
+from bookalimo.schemas.places import (
+    compile_field_mask,
+    build_field_tree,
+)
 
 # Allow extra fields not in the model
 compiled = compile_field_mask(
@@ -262,12 +336,20 @@ class ExtendedGooglePlace(GooglePlace):
 
 custom_tree = build_field_tree(ExtendedGooglePlace)
 compiled = compile_field_mask(
-    [F.display_name, "custom_business_field", "special_rating"], field_tree=custom_tree
+    [
+        F.display_name,
+        "custom_business_field",
+        "special_rating",
+    ],
+    field_tree=custom_tree,
 )
 
 # Validation with warning handling
 compiled = compile_field_mask(
-    [F.display_name, "unknown_field"],
+    [
+        F.display_name,
+        "unknown_field",
+    ],
     prefix="places",
     on_warning=lambda msg, path, seg: print(
         f"Field warning: {msg}"
@@ -302,7 +384,11 @@ request = SearchTextRequest(
     rank_preference=RankPreference.RELEVANCE,
     location_bias=LocationBias(
         circle=Circle(
-            center=LatLng(latitude=40.7580, longitude=-73.9855), radius_meters=500
+            center=LatLng(
+                latitude=40.7580,
+                longitude=-73.9855,
+            ),
+            radius_meters=500,
         )
     ),
 )
@@ -315,7 +401,10 @@ results = await client.places.search(request=request)
 For autocomplete with filters:
 
 ```python
-from bookalimo.schemas.places import AutocompletePlacesRequest, LocationBias
+from bookalimo.schemas.places import (
+    AutocompletePlacesRequest,
+    LocationBias,
+)
 
 request = AutocompletePlacesRequest(
     input="Empire State",

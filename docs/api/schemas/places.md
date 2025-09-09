@@ -25,10 +25,16 @@ Data models for Google Places API integration.
 Control response data with `FieldMaskInput`:
 ```python
 # String or list of strings
-fields = ["display_name", "formatted_address", "rating"]
+fields = [
+    "display_name",
+    "formatted_address",
+    "rating",
+]
 
 # Use compile_field_mask for validation
-from bookalimo.schemas.places import compile_field_mask
+from bookalimo.schemas.places import (
+    compile_field_mask,
+)
 
 compiled = compile_field_mask(fields)
 ```

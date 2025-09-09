@@ -8,13 +8,22 @@ Override transport behavior for specific requirements:
 
 ```python
 import httpx
-from bookalimo import AsyncBookalimo
-from bookalimo.transport import AsyncTransport
+from bookalimo import (
+    AsyncBookalimo,
+)
+from bookalimo.transport import (
+    AsyncTransport,
+)
 
 # Custom transport configuration
 custom_transport = AsyncTransport(
     base_url="https://api.bookalimo.com",
-    timeouts=httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=2.0),
+    timeouts=httpx.Timeout(
+        connect=5.0,
+        read=30.0,
+        write=5.0,
+        pool=2.0,
+    ),
     credentials=credentials,
     retries=5,
     backoff=1.0,
@@ -68,7 +77,9 @@ export BOOKALIMO_LOG_LEVEL=DEBUG
 
 ```python
 import logging
-from bookalimo.logging import get_logger
+from bookalimo.logging import (
+    get_logger,
+)
 
 # Configure SDK logging
 logging.getLogger("bookalimo").setLevel(logging.DEBUG)
@@ -101,11 +112,17 @@ Customize retry behavior:
 ```python
 # Aggressive retry for unreliable networks
 transport = AsyncTransport(
-    retries=10, backoff=2.0, credentials=credentials  # 2s, 4s, 8s, 16s...
+    retries=10,
+    backoff=2.0,
+    credentials=credentials,  # 2s, 4s, 8s, 16s...
 )
 
 # No retries for testing
-test_transport = SyncTransport(retries=0, timeouts=1.0, credentials=test_credentials)
+test_transport = SyncTransport(
+    retries=0,
+    timeouts=1.0,
+    credentials=test_credentials,
+)
 ```
 
 ## Custom HTTP Clients
@@ -115,9 +132,13 @@ Inject pre-configured httpx clients:
 ```python
 # Custom httpx client
 async with httpx.AsyncClient(
-    timeout=30.0, limits=httpx.Limits(max_connections=100)
+    timeout=30.0,
+    limits=httpx.Limits(max_connections=100),
 ) as http_client:
-    transport = AsyncTransport(client=http_client, credentials=credentials)
+    transport = AsyncTransport(
+        client=http_client,
+        credentials=credentials,
+    )
 
     async with AsyncBookalimo(transport=transport) as client:
         quote = await client.pricing.quote(...)
@@ -138,15 +159,23 @@ GOOGLE_PLACES_API_KEY=your_google_key
 
 ```python
 import os
-from bookalimo import AsyncBookalimo
-from bookalimo.transport.auth import Credentials
+from bookalimo import (
+    AsyncBookalimo,
+)
+from bookalimo.transport.auth import (
+    Credentials,
+)
 
 
 def create_production_client():
     credentials = Credentials.create(
         user_id=os.getenv("BOOKALIMO_USER_ID"),
         password=os.getenv("BOOKALIMO_PASSWORD"),
-        is_customer=os.getenv("BOOKALIMO_IS_CUSTOMER", "false").lower() == "true",
+        is_customer=os.getenv(
+            "BOOKALIMO_IS_CUSTOMER",
+            "false",
+        ).lower()
+        == "true",
     )
 
     return AsyncBookalimo(

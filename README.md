@@ -34,8 +34,12 @@ pip install bookalimo[places]
 
 ```python
 import asyncio
-from bookalimo import AsyncBookalimo
-from bookalimo.transport.auth import Credentials
+from bookalimo import (
+    AsyncBookalimo,
+)
+from bookalimo.transport.auth import (
+    Credentials,
+)
 from bookalimo.schemas.booking import (
     RateType,
     Location,
@@ -47,16 +51,27 @@ from bookalimo.schemas.booking import (
 
 
 async def book_ride():
-    credentials = Credentials.create("your_id", "your_password", is_customer=False)
+    credentials = Credentials.create(
+        "your_id",
+        "your_password",
+        is_customer=False,
+    )
 
     pickup = Location(
         type=LocationType.ADDRESS,
         address=Address(
             place_name="Empire State Building",
-            city=City(city_name="New York", country_code="US", state_code="NY"),
+            city=City(
+                city_name="New York",
+                country_code="US",
+                state_code="NY",
+            ),
         ),
     )
-    dropoff = Location(type=LocationType.AIRPORT, airport=Airport(iata_code="JFK"))
+    dropoff = Location(
+        type=LocationType.AIRPORT,
+        airport=Airport(iata_code="JFK"),
+    )
 
     async with AsyncBookalimo(credentials=credentials) as client:
         # Get pricing
@@ -70,7 +85,10 @@ async def book_ride():
         )
 
         # Book reservation
-        booking = await client.reservations.book(token=quote.token, method="charge")
+        booking = await client.reservations.book(
+            token=quote.token,
+            method="charge",
+        )
         return booking.reservation_id
 
 
@@ -80,18 +98,24 @@ confirmation = asyncio.run(book_ride())
 ## Sync Usage
 
 ```python
-from bookalimo import Bookalimo
+from bookalimo import (
+    Bookalimo,
+)
 
 with Bookalimo(credentials=credentials) as client:
     quote = client.pricing.quote(...)
-    booking = client.reservations.book(token=quote.token, method="charge")
+    booking = client.reservations.book(
+        token=quote.token,
+        method="charge",
+    )
 ```
 
 ## Google Places Integration
 
 ```python
 async with AsyncBookalimo(
-    credentials=credentials, google_places_api_key="your-google-places-key"
+    credentials=credentials,
+    google_places_api_key="your-google-places-key",
 ) as client:
     # Search locations
     results = await client.places.search("Hilton Miami Beach")
@@ -107,7 +131,10 @@ async with AsyncBookalimo(
 ## Error Handling
 
 ```python
-from bookalimo.exceptions import BookalimoHTTPError, BookalimoValidationError
+from bookalimo.exceptions import (
+    BookalimoHTTPError,
+    BookalimoValidationError,
+)
 
 try:
     booking = await client.reservations.book(...)

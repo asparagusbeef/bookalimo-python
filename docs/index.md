@@ -12,10 +12,12 @@ pip install bookalimo[places]
 ```
 
 The SDK provides two main clients:
+
 - `AsyncBookalimo` - for async applications
 - `Bookalimo` - for sync applications
 
 Both clients expose the same services:
+
 - `.pricing` - get quotes and update booking details
 - `.reservations` - book, list, modify, and cancel reservations
 - `.places` - Google Places search and geocoding (optional)

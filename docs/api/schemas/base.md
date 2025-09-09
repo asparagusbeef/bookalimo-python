@@ -15,7 +15,10 @@ All Bookalimo API models inherit from `ApiModel`, which provides:
 Models automatically handle field name conversion:
 
 ```python
-from bookalimo.schemas.booking import PriceRequest, RateType
+from bookalimo.schemas.booking import (
+    PriceRequest,
+    RateType,
+)
 
 # Python snake_case (natural)
 request = PriceRequest(
@@ -56,7 +59,12 @@ data = request.model_dump(context={"case": "snake"})
 # → {"rate_type": 0, "date_time": "...", "car_class_code": "SD"}
 
 # Combined options
-data = request.model_dump(context={"enum_out": "name", "case": "snake"})
+data = request.model_dump(
+    context={
+        "enum_out": "name",
+        "case": "snake",
+    }
+)
 # → {"rate_type": "P2P", "date_time": "...", "car_class_code": "SD"}
 
 # Boolean alias for case
@@ -86,7 +94,10 @@ quote = await client.pricing.quote(
 ```python
 # For logging or external APIs
 request_data = price_request.model_dump(
-    context={"enum_out": "name", "snake_case": True}
+    context={
+        "enum_out": "name",
+        "snake_case": True,
+    }
 )
 
 # For debugging

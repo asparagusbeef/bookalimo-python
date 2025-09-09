@@ -7,13 +7,22 @@ Main entry points for the Bookalimo SDK.
 Async client for high-concurrency applications:
 
 ```python
-from bookalimo import AsyncBookalimo
-from bookalimo.transport.auth import Credentials
+from bookalimo import (
+    AsyncBookalimo,
+)
+from bookalimo.transport.auth import (
+    Credentials,
+)
 
-credentials = Credentials.create("user_id", "password", is_customer=False)
+credentials = Credentials.create(
+    "user_id",
+    "password",
+    is_customer=False,
+)
 
 async with AsyncBookalimo(
-    credentials=credentials, google_places_api_key="optional_google_key"
+    credentials=credentials,
+    google_places_api_key="optional_google_key",
 ) as client:
     quote = await client.pricing.quote(...)
     booking = await client.reservations.book(...)
@@ -24,7 +33,9 @@ async with AsyncBookalimo(
 Synchronous client for simple scripts:
 
 ```python
-from bookalimo import Bookalimo
+from bookalimo import (
+    Bookalimo,
+)
 
 with Bookalimo(credentials=credentials) as client:
     quote = client.pricing.quote(...)

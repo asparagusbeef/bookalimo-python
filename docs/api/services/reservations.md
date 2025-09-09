@@ -35,7 +35,11 @@ Modify or cancel a reservation:
 await client.reservations.edit("ABC123", is_cancel=True)
 
 # Modify details
-await client.reservations.edit("ABC123", passengers=3, pickup_date="12/26/2024")
+await client.reservations.edit(
+    "ABC123",
+    passengers=3,
+    pickup_date="12/26/2024",
+)
 ```
 
 ### book()
@@ -44,8 +48,14 @@ Book a reservation using session token from pricing:
 
 ```python
 # Charge account
-booking = await client.reservations.book(token=quote.token, method="charge")
+booking = await client.reservations.book(
+    token=quote.token,
+    method="charge",
+)
 
 # Credit card
-booking = await client.reservations.book(token=quote.token, credit_card=CreditCard(...))
+booking = await client.reservations.book(
+    token=quote.token,
+    credit_card=CreditCard(...),
+)
 ```
