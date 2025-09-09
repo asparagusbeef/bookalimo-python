@@ -22,6 +22,7 @@ from .google import (
     RoutingParameters,
     SearchTextLocationRestriction,
     SearchTextRequest,
+    SearchTextResponse,
     StringRange,
     StructuredFormat,
     Suggestion,
@@ -57,4 +58,5 @@ __all__ = [
     "compile_field_mask",
     "EVOptions",
     "RoutingParameters",
+    "SearchTextResponse",
 ]
