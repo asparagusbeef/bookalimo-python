@@ -322,8 +322,8 @@ def mock_places_search_response():
         "places": [
             {
                 "id": "ChIJaXQRs6lZwokRY6tbFzB7VhE",
-                "displayName": {"text": "Empire State Building"},
-                "formattedAddress": "20 W 34th St, New York, NY 10001, USA",
+                "display_name": {"text": "Empire State Building"},
+                "formatted_address": "20 W 34th St, New York, NY 10001, USA",
                 "location": {"latitude": 40.7484405, "longitude": -73.9856644},
                 "types": ["establishment", "point_of_interest", "tourist_attraction"],
             }

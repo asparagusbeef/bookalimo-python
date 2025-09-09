@@ -499,7 +499,9 @@ class TestAsyncTransport:
             # Check that request was logged (without sensitive data)
             log_messages = [record.message for record in caplog.records]
             request_logs = [
-                msg for msg in log_messages if "POST /booking/price/" in msg
+                msg
+                for msg in log_messages
+                if "POST https://api.test.com/booking/price/" in msg
             ]
             assert len(request_logs) > 0
 

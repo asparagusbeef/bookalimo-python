@@ -128,7 +128,7 @@ warn_return_any = true
 warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
-mypy_path = "stubs"
+mypy_path = "src:stubs"
 disable_error_code = ["prop-decorator"]
 
 [[tool.mypy.overrides]]

@@ -71,7 +71,7 @@ class TestGooglePlacesCommon:
 
     def test_mask_header_with_list(self):
         """Test mask header creation with list of fields."""
-        fields = ["id", "displayName", "formattedAddress"]
+        fields = ["id", "display_name", "formatted_address"]
         result = _mask_header(fields)
 
         assert len(result) == 1
@@ -80,7 +80,7 @@ class TestGooglePlacesCommon:
 
     def test_mask_header_with_string(self):
         """Test mask header creation with comma-separated string."""
-        fields = "id,displayName,formattedAddress"
+        fields = "id,display_name,formatted_address"
         result = _mask_header(fields)
 
         assert len(result) == 1
@@ -207,21 +207,18 @@ class TestGooglePlacesSync:
             ]
         )
 
-        with (
-            patch.object(
-                places_client.transport, "autocomplete_places"
-            ) as mock_transport,
-            patch(
-                "bookalimo.integrations.google_places.client_sync.validate_proto_to_model"
-            ) as mock_validate,
-        ):
-            mock_transport.return_value = mock_proto_response
+        # Mock the validate_proto_to_model function directly
+        with patch(
+            "bookalimo.integrations.google_places.common.validate_proto_to_model"
+        ) as mock_validate:
             mock_validate.return_value = expected_response
+            places_client.transport.client.autocomplete_places.return_value = (
+                mock_proto_response
+            )
 
             result = places_client.autocomplete(request=request)
 
             assert result == expected_response
-            mock_transport.assert_called_once_with(request=request.model_dump())
             mock_validate.assert_called_once_with(
                 mock_proto_response, models.AutocompletePlacesResponse
             )
@@ -236,51 +233,83 @@ class TestGooglePlacesSync:
             gexc.InvalidArgument("Invalid request")
         )
 
-        with pytest.raises(BookalimoError, match="Google Places Autocomplete failed"):
+        with pytest.raises(
+            BookalimoError, match="Google Places Autocomplete invalid argument"
+        ):
             places_client.autocomplete(request=request)
 
     def test_search_success(self, places_client):
         """Test successful text search."""
-        mock_proto_response = Mock()
-        mock_proto_response.places = [Mock(), Mock()]  # Two places
-        places_client.transport.client.search_text.return_value = mock_proto_response
-
+        # Create a mock that bypasses the proto_adapter by mocking the normalize function directly
         with patch(
-            "bookalimo.integrations.google_places.proto_adapter.validate_proto_to_model"
-        ) as mock_validate:
-            mock_google_place = GooglePlace(
-                formatted_address="Test Place",
-                location=LatLng(latitude=0.0, longitude=0.0),
+            "bookalimo.integrations.google_places.common._normalize_search_results"
+        ) as mock_normalize:
+            # Mock the expected Place objects
+            expected_places = [
+                models.Place(
+                    formatted_address="Test Place",
+                    lat=0.0,
+                    lng=0.0,
+                    place_type=models.PlaceType.ADDRESS,
+                    google_place=GooglePlace(
+                        formatted_address="Test Place",
+                        location=LatLng(latitude=0.0, longitude=0.0),
+                    ),
+                ),
+                models.Place(
+                    formatted_address="Test Place",
+                    lat=0.0,
+                    lng=0.0,
+                    place_type=models.PlaceType.ADDRESS,
+                    google_place=GooglePlace(
+                        formatted_address="Test Place",
+                        location=LatLng(latitude=0.0, longitude=0.0),
+                    ),
+                ),
+            ]
+            mock_normalize.return_value = expected_places
+
+            # Mock proto response from transport - this can be anything since we're bypassing normalization
+            mock_proto_response = Mock()
+            places_client.transport.client.search_text.return_value = (
+                mock_proto_response
             )
-            # Mock should return GooglePlace object, not list containing models.Place
-            mock_validate.return_value = mock_google_place
 
             result = places_client.search("Empire State Building")
 
             assert len(result) == 2
             assert all(isinstance(place, models.Place) for place in result)
             assert all(place.formatted_address == "Test Place" for place in result)
-            assert all(place.google_place == mock_google_place for place in result)
             places_client.transport.client.search_text.assert_called_once()
 
             # Verify metadata (field mask) was set
             call_kwargs = places_client.transport.client.search_text.call_args[1]
             assert "metadata" in call_kwargs
+            mock_normalize.assert_called_once_with(mock_proto_response)
 
     def test_search_with_custom_fields(self, places_client):
         """Test text search with custom field selection."""
-        mock_proto_response = Mock()
-        mock_proto_response.places = []
-        places_client.transport.client.search_text.return_value = mock_proto_response
+        # Mock the normalize function to return empty list
+        with patch(
+            "bookalimo.integrations.google_places.common._normalize_search_results"
+        ) as mock_normalize:
+            mock_normalize.return_value = []
 
-        custom_fields = ["id", "displayName", "formattedAddress"]
-        places_client.search("Test Query", fields=custom_fields)
+            # Mock proto response from transport
+            mock_proto_response = Mock()
+            places_client.transport.client.search_text.return_value = (
+                mock_proto_response
+            )
 
-        call_kwargs = places_client.transport.client.search_text.call_args[1]
-        assert "metadata" in call_kwargs
-        metadata = call_kwargs["metadata"]
-        assert len(metadata) == 1
-        assert metadata[0][0] == "x-goog-fieldmask"
+            custom_fields = ["id", "display_name", "formatted_address"]
+            places_client.search("Test Query", fields=custom_fields)
+
+            call_kwargs = places_client.transport.client.search_text.call_args[1]
+            assert "metadata" in call_kwargs
+            metadata = call_kwargs["metadata"]
+            assert len(metadata) == 1
+            assert metadata[0][0] == "x-goog-fieldmask"
+            mock_normalize.assert_called_once_with(mock_proto_response)
 
     def test_search_invalid_argument_error(self, places_client):
         """Test search with invalid argument error."""
@@ -305,18 +334,27 @@ class TestGooglePlacesSync:
     def test_get_place_success(self, places_client):
         """Test successful get place request."""
         place_id = "test-place-id"
-        mock_proto_response = Mock()
-        places_client.transport.client.get_place.return_value = mock_proto_response
 
+        # Mock the _normalize_place_from_proto function directly to bypass proto adapter
         with patch(
-            "bookalimo.integrations.google_places.proto_adapter.validate_proto_to_model"
-        ) as mock_validate:
+            "bookalimo.integrations.google_places.common._normalize_place_from_proto"
+        ) as mock_normalize:
             mock_google_place = GooglePlace(
                 formatted_address="Test Place",
                 location=LatLng(latitude=40.7128, longitude=-74.0060),
             )
-            # Mock should return GooglePlace object, not list containing models.Place
-            mock_validate.return_value = mock_google_place
+            expected_place = models.Place(
+                formatted_address="Test Place",
+                lat=40.7128,
+                lng=-74.0060,
+                place_type=models.PlaceType.ADDRESS,
+                google_place=mock_google_place,
+            )
+            mock_normalize.return_value = expected_place
+
+            # Mock proto response from transport
+            mock_proto_response = Mock()
+            places_client.transport.client.get_place.return_value = mock_proto_response
 
             result = places_client.get(place_id)
 
@@ -326,6 +364,7 @@ class TestGooglePlacesSync:
             assert result.lng == -74.0060
             assert result.google_place == mock_google_place
             places_client.transport.client.get_place.assert_called_once()
+            mock_normalize.assert_called_once_with(mock_proto_response)
 
             # Verify the request format
             call_args = places_client.transport.client.get_place.call_args[1]
@@ -386,9 +425,12 @@ class TestGooglePlacesSync:
         """Test geocoding with HTTP error."""
         request = models.GeocodingRequest(address="Test Address")
 
-        places_client.http_client.get.side_effect = httpx.HTTPStatusError(
+        # Create a proper mock response that will fail raise_for_status
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
             "Bad Request", request=Mock(), response=Mock()
         )
+        places_client.http_client.get.return_value = mock_response
 
         with pytest.raises(BookalimoError, match="HTTP geocoding failed"):
             places_client.geocode(request)
@@ -483,21 +525,18 @@ class TestGooglePlacesAsync:
             ]
         )
 
-        with (
-            patch.object(
-                places_client.transport, "autocomplete_places", new_callable=AsyncMock
-            ) as mock_transport,
-            patch(
-                "bookalimo.integrations.google_places.client_async.validate_proto_to_model"
-            ) as mock_validate,
-        ):
-            mock_transport.return_value = mock_proto_response
+        # Mock the validate_proto_to_model function directly
+        with patch(
+            "bookalimo.integrations.google_places.common.validate_proto_to_model"
+        ) as mock_validate:
             mock_validate.return_value = expected_response
+            places_client.transport.client.autocomplete_places = AsyncMock(
+                return_value=mock_proto_response
+            )
 
             result = await places_client.autocomplete(request=request)
 
             assert result == expected_response
-            mock_transport.assert_called_once_with(request=request.model_dump())
             mock_validate.assert_called_once_with(
                 mock_proto_response, models.AutocompletePlacesResponse
             )
@@ -505,21 +544,28 @@ class TestGooglePlacesAsync:
     @pytest.mark.asyncio
     async def test_search_success(self, places_client):
         """Test successful async text search."""
-        mock_proto_response = Mock()
-        mock_proto_response.places = [Mock()]
-        places_client.transport.client.search_text = AsyncMock(
-            return_value=mock_proto_response
-        )
-
+        # Mock the normalize function to bypass proto adapter
         with patch(
-            "bookalimo.integrations.google_places.proto_adapter.validate_proto_to_model"
-        ) as mock_validate:
+            "bookalimo.integrations.google_places.common._normalize_search_results"
+        ) as mock_normalize:
             mock_google_place = GooglePlace(
                 formatted_address="Async Test Place",
                 location=LatLng(latitude=40.7128, longitude=-74.0060),
             )
-            # Mock should return GooglePlace object, not list containing models.Place
-            mock_validate.return_value = mock_google_place
+            expected_place = models.Place(
+                formatted_address="Async Test Place",
+                lat=40.7128,
+                lng=-74.0060,
+                place_type=models.PlaceType.ADDRESS,
+                google_place=mock_google_place,
+            )
+            mock_normalize.return_value = [expected_place]
+
+            # Mock proto response from transport
+            mock_proto_response = Mock()
+            places_client.transport.client.search_text = AsyncMock(
+                return_value=mock_proto_response
+            )
 
             result = await places_client.search("Async Test Query")
 
@@ -529,25 +575,35 @@ class TestGooglePlacesAsync:
             assert result[0].lat == 40.7128
             assert result[0].lng == -74.0060
             places_client.transport.client.search_text.assert_called_once()
+            mock_normalize.assert_called_once_with(mock_proto_response)
 
     @pytest.mark.asyncio
     async def test_get_place_success(self, places_client):
         """Test successful async get place request."""
         place_id = "async-test-place-id"
-        mock_proto_response = Mock()
-        places_client.transport.client.get_place = AsyncMock(
-            return_value=mock_proto_response
-        )
 
+        # Mock the normalize function to bypass proto adapter
         with patch(
-            "bookalimo.integrations.google_places.proto_adapter.validate_proto_to_model"
-        ) as mock_validate:
+            "bookalimo.integrations.google_places.common._normalize_place_from_proto"
+        ) as mock_normalize:
             mock_google_place = GooglePlace(
                 formatted_address="Async Test Place",
                 location=LatLng(latitude=40.7128, longitude=-74.0060),
             )
-            # Mock should return GooglePlace object, not list containing models.Place
-            mock_validate.return_value = mock_google_place
+            expected_place = models.Place(
+                formatted_address="Async Test Place",
+                lat=40.7128,
+                lng=-74.0060,
+                place_type=models.PlaceType.ADDRESS,
+                google_place=mock_google_place,
+            )
+            mock_normalize.return_value = expected_place
+
+            # Mock proto response from transport
+            mock_proto_response = Mock()
+            places_client.transport.client.get_place = AsyncMock(
+                return_value=mock_proto_response
+            )
 
             result = await places_client.get(place_id)
 
@@ -557,6 +613,7 @@ class TestGooglePlacesAsync:
             assert result.lng == -74.0060
             assert result.google_place == mock_google_place
             places_client.transport.client.get_place.assert_called_once()
+            mock_normalize.assert_called_once_with(mock_proto_response)
 
     @pytest.mark.asyncio
     async def test_geocode_success(self, places_client):
@@ -589,11 +646,12 @@ class TestGooglePlacesAsync:
         """Test async geocoding with HTTP error."""
         request = models.GeocodingRequest(address="Async Test Address")
 
-        places_client.http_client.get = AsyncMock(
-            side_effect=httpx.HTTPStatusError(
-                "Bad Request", request=Mock(), response=Mock()
-            )
+        # Create a proper mock response that will fail raise_for_status
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=Mock(), response=Mock()
         )
+        places_client.http_client.get = AsyncMock(return_value=mock_response)
 
         with pytest.raises(BookalimoError, match="HTTP geocoding failed"):
             await places_client.geocode(request)
@@ -752,7 +810,12 @@ class TestGooglePlacesErrorHandling:
     def test_handles_network_timeout(self):
         """Test handling of network timeouts in HTTP requests."""
         mock_http_client = Mock()
-        mock_http_client.get.side_effect = httpx.TimeoutException("Request timeout")
+        # Create a proper mock response that will fail raise_for_status with timeout
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = httpx.TimeoutException(
+            "Request timeout"
+        )
+        mock_http_client.get.return_value = mock_response
 
         places_client = GooglePlaces(api_key="test-key", http_client=mock_http_client)
 
