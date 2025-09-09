@@ -27,6 +27,7 @@ quote = await client.pricing.quote(
 ```
 
 Returns `PriceResponse` with:
+
 - `token` - session token for subsequent requests
 - `prices` - list of available vehicle classes
 
@@ -44,5 +45,6 @@ details = await client.pricing.update_details(
 ```
 
 Returns `DetailsResponse` with:
+
 - `price` - updated total price
 - `breakdown` - itemized price breakdown

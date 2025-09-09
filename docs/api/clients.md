@@ -45,6 +45,7 @@ with Bookalimo(credentials=credentials) as client:
 ## Constructor Parameters
 
 Both clients accept:
+
 - `credentials` - authentication (from `Credentials.create()`)
 - `base_url` - API endpoint (default: production)
 - `timeouts` - request timeouts (default: 5.0s)
@@ -55,6 +56,7 @@ Both clients accept:
 ## Services
 
 All clients expose:
+
 - `.pricing` - get quotes and update details
 - `.reservations` - book, list, edit reservations
 - `.places` - Google Places integration (requires `bookalimo[places]`)

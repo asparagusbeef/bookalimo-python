@@ -53,15 +53,18 @@ async with AsyncBookalimo(credentials=creds) as client:
 ## Rate Types
 
 **Point-to-Point (`RateType.P2P`)**
+
 - Fixed-rate transfers between two locations
 - Most common for airport pickups
 
 **Hourly (`RateType.HOURLY`)**
+
 - Time-based service with minimum hours
 - Requires `hours` parameter
 - Same pickup/dropoff location
 
 **Daily (`RateType.DAILY`)**
+
 - Full-day service regardless of mileage
 
 ## Payment Methods
@@ -85,5 +88,6 @@ booking = await client.reservations.book(
 ## Date/Time Format
 
 Use `"MM/dd/yyyy hh:mm tt"` format:
+
 - `"12/25/2024 03:00 PM"`
 - `"01/15/2025 09:30 AM"`
