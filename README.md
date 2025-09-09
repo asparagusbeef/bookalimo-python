@@ -11,19 +11,18 @@ Python client library for the Book-A-Limo transportation booking API with async/
 
 ## Important notes
 
-- **Unofficial & community-maintained**: This SDK is not affiliated with or sponsored by Book-A-Limo. API changes may break functionality.
 - **Docs are in preview**: Many pages were AI-generated from the codebase and haven’t had a full manual review yet. In case of conflict, the code and docstrings are the source of truth. Please [report issues](https://github.com/asparagusbeef/bookalimo-python/issues) you find.
 - **Terms & credentials**: Use of Book-A-Limo API and Google APIs are subject to their respective Terms of Service.
 
 ## Design philosophy: IDE-first DX
 
-The library is **comprehensively typed** and **richly documented** via docstrings. Most users can rely on IDE hints and autocomplete without reading the docs.
+The library is **comprehensively typed** and **richly documented** via docstrings. Most users can rely on IDE hints, docstrings, and autocomplete without reading the docs.
 
 ## Features
 
 - **Async & Sync Support** – Choose the right client for your use case
 - **Type Safety** – Full Pydantic models with validation
-- **Google Places Integration** – Location search and geocoding
+- **Google Places Integration** – Autocomplete, search, details, and geocoding
 - **Automatic Retry** – Built-in exponential backoff for reliability
 - **Comprehensive Error Handling** – Detailed exceptions with context
 - **Resource Management** – Context managers for proper cleanup
@@ -35,7 +34,7 @@ pip install bookalimo
 
 # With Google Places integration
 pip install bookalimo[places]
-````
+```
 
 ## Core API
 
