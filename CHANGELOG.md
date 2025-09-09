@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-01-15
+
+### Added
+- **Schemas**: Enhanced `ApiModel` serialization with flexible case conversion options
+- **Schemas**: Added `snake_case` context option for forcing snake_case output
+- **Schemas**: Deep snake_case conversion support for nested data structures
+- **Exports**: Added missing exports (`GooglePlace`, `PriceLevel`, `FieldMaskInput`, `BusinessStatus`) to main schema module
+
+### Changed
+- **Google Places**: Geocoding API now properly includes API key in request parameters
+- **Google Places**: Both sync and async clients now store API key as instance variable for better access
+- **Schemas**: `CardHolderType` enum values updated with correct API mappings (`CORPORATE=0`, `AGENCY=1`, `THIRD_PARTY=2`, `SAME_AS_PASSENGER=3`)
+- **Schemas**: Enhanced `Address.google_geocode` field documentation with common usage mistake warning
+- **Schemas**: `LocalizedText.language_code` field is now optional
+- **Common**: `build_get_place_request` now uses enum name serialization for better API compatibility
+- **CI**: Re-enabled performance and slow integration tests in GitHub Actions workflow
+
+### Fixed
+- **Documentation**: Clarified that Google Application Default Credentials (ADC) is not yet implemented across all documentation
+- **Google Places**: Fixed geocoding API authentication by properly passing API key in query parameters
+
 ## [1.0.1] - 2025-09-08
 
 ### Added
