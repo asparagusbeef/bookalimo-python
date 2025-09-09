@@ -173,14 +173,11 @@ async with AsyncBookalimo(credentials=credentials) as client:
         pickup=pickup_location,
         dropoff=dropoff_location,
         passengers=2,
-        luggage=2
+        luggage=2,
     )
 
     # Book reservation
-    booking = await client.reservations.book(
-        token=quote.token,
-        method="charge"
-    )
+    booking = await client.reservations.book(token=quote.token, method="charge")
 
     print(f"Reservation confirmed: {booking.reservation_id}")
 ```
@@ -188,8 +185,7 @@ async with AsyncBookalimo(credentials=credentials) as client:
 ### With Google Places Integration
 ```python
 async with AsyncBookalimo(
-    credentials=credentials,
-    google_places_api_key="your-google-key"
+    credentials=credentials, google_places_api_key="your-google-key"
 ) as client:
     # Find locations
     pickup_results = await client.places.search("JFK Airport")
@@ -217,7 +213,7 @@ except BookalimoError as e:
 
 ## Version Information
 
-This documentation covers Bookalimo Python SDK v1.0.0. For the latest version and updates, see the [changelog](./CHANGELOG.md).
+This documentation covers Bookalimo Python SDK v1.0.0. For the latest version and updates, see the [changelog](../CHANGELOG.md).
 
 ## Support
 
