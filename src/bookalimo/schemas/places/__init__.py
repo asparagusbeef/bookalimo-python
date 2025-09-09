@@ -1,9 +1,12 @@
 """Google Places API schemas."""
 
+from .common import AddressDescriptor
 from .google import (
+    Airport,
     AutocompletePlacesRequest,
     AutocompletePlacesResponse,
     Circle,
+    EVConnectorType,
     FormattableText,
     GeocodingRequest,
     GetPlaceRequest,
@@ -13,13 +16,18 @@ from .google import (
     PlacePrediction,
     PlaceType,
     QueryPrediction,
+    RankPreference,
+    SearchTextRequest,
     StringRange,
     StructuredFormat,
     Suggestion,
 )
+from .place import AddressComponent, GooglePlace
 
 __all__ = [
     "PlaceType",
+    "RankPreference",
+    "EVConnectorType",
     "StringRange",
     "FormattableText",
     "StructuredFormat",
@@ -27,6 +35,7 @@ __all__ = [
     "LocationBias",
     "LocationRestriction",
     "Place",
+    "GooglePlace",
     "AutocompletePlacesResponse",
     "PlacePrediction",
     "QueryPrediction",
@@ -34,4 +43,8 @@ __all__ = [
     "GetPlaceRequest",
     "AutocompletePlacesRequest",
     "GeocodingRequest",
+    "SearchTextRequest",
+    "Airport",
+    "AddressDescriptor",
+    "AddressComponent",
 ]

@@ -1,4 +1,15 @@
 import re
+import sys
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        pass
+
+
 from typing import Any, Optional, cast
 
 import pycountry
@@ -24,7 +35,7 @@ from .common import (
     LatLng,
     Viewport,
 )
-from .place import Place as GooglePlace
+from .place import GooglePlace, PriceLevel
 
 # ---------- Constants & Enums ----------
 
@@ -33,12 +44,37 @@ COUNTRY_CODES = {
 }
 
 
-class PlaceType:
+class PlaceType(StrEnum):
     """Place type constants."""
 
     ADDRESS = "address"
     AIRPORT = "airport"
     POI = "poi"  # Point of Interest
+
+
+class RankPreference(StrEnum):
+    """Ranking preference constants for SearchTextRequest."""
+
+    RANK_PREFERENCE_UNSPECIFIED = "RANK_PREFERENCE_UNSPECIFIED"
+    DISTANCE = "DISTANCE"
+    RELEVANCE = "RELEVANCE"
+
+
+class EVConnectorType(StrEnum):
+    """EV connector type constants."""
+
+    EV_CONNECTOR_TYPE_UNSPECIFIED = "EV_CONNECTOR_TYPE_UNSPECIFIED"
+    EV_CONNECTOR_TYPE_OTHER = "EV_CONNECTOR_TYPE_OTHER"
+    EV_CONNECTOR_TYPE_J1772 = "EV_CONNECTOR_TYPE_J1772"
+    EV_CONNECTOR_TYPE_TYPE_2 = "EV_CONNECTOR_TYPE_TYPE_2"
+    EV_CONNECTOR_TYPE_CHADEMO = "EV_CONNECTOR_TYPE_CHADEMO"
+    EV_CONNECTOR_TYPE_CCS_COMBO_1 = "EV_CONNECTOR_TYPE_CCS_COMBO_1"
+    EV_CONNECTOR_TYPE_CCS_COMBO_2 = "EV_CONNECTOR_TYPE_CCS_COMBO_2"
+    EV_CONNECTOR_TYPE_TESLA = "EV_CONNECTOR_TYPE_TESLA"
+    EV_CONNECTOR_TYPE_UNSPECIFIED_GB_T = "EV_CONNECTOR_TYPE_UNSPECIFIED_GB_T"
+    EV_CONNECTOR_TYPE_UNSPECIFIED_WALL_OUTLET = (
+        "EV_CONNECTOR_TYPE_UNSPECIFIED_WALL_OUTLET"
+    )
 
 
 # ---------- Text Primitives ----------
@@ -148,6 +184,93 @@ class LocationRestriction(BaseModel):
         return self
 
 
+# ---------- Search Text Supporting Models ----------
+
+
+class Polyline(BaseModel):
+    """Route polyline representation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    encoded_polyline: Optional[str] = Field(None, description="Encoded polyline string")
+
+
+class RoutingParameters(BaseModel):
+    """Parameters to configure routing calculations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    origin: Optional[LatLng] = Field(None, description="Explicit routing origin")
+    travel_mode: Optional[str] = Field(
+        None, description="Travel mode (DRIVE, WALK, BICYCLE, TRANSIT)"
+    )
+    routing_preference: Optional[str] = Field(
+        None, description="Routing preference (TRAFFIC_AWARE, etc.)"
+    )
+
+
+class EVOptions(BaseModel):
+    """Searchable EV options for place search."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    minimum_charging_rate_kw: Optional[float] = Field(
+        None, gt=0, description="Minimum required charging rate in kilowatts"
+    )
+    connector_types: list[EVConnectorType] = Field(
+        default_factory=list, description="Preferred EV connector types"
+    )
+
+    @field_validator("connector_types")
+    @classmethod
+    def _validate_connector_types(
+        cls, v: list[EVConnectorType]
+    ) -> list[EVConnectorType]:
+        # Remove duplicates while preserving order
+        seen = set()
+        cleaned = []
+        for connector_type in v:
+            if connector_type not in seen:
+                cleaned.append(connector_type)
+                seen.add(connector_type)
+        return cleaned
+
+
+class SearchAlongRouteParameters(BaseModel):
+    """Parameters for searching along a route."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    polyline: Polyline = Field(..., description="Route polyline")
+
+
+class SearchTextLocationBias(BaseModel):
+    """
+    Location bias for SearchTextRequest - allows both rectangle and circle.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rectangle: Optional[Viewport] = None
+    circle: Optional[Circle] = None
+
+
+class SearchTextLocationRestriction(BaseModel):
+    """
+    Location restriction for SearchTextRequest - allows only rectangle.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    rectangle: Optional[Viewport] = None
+
+    @model_validator(mode="after")
+    def _validate_rectangle_required(self) -> Self:
+        if self.rectangle is None:
+            raise ValueError("rectangle is required for LocationRestriction")
+        return self
+
+
 # ---------- Responses ----------
 
 
@@ -157,10 +280,7 @@ class Place(BaseModel):
     formatted_address: str = Field(..., description="Full formatted address")
     lat: float = Field(..., description="Latitude")
     lng: float = Field(..., description="Longitude")
-    place_type: str = Field(..., description="Type: address, airport, or poi")
-    iata_code: Optional[str] = Field(
-        None, description="IATA airport code if applicable"
-    )
+    place_type: PlaceType = Field(..., description="Type: address, airport, or poi")
     google_place: Optional[GooglePlace] = Field(
         None, description="Raw Google Places API response"
     )
@@ -594,3 +714,181 @@ class GeocodingRequest(BaseModel):
             params = params.add("region", self.region)
 
         return params
+
+
+class SearchTextRequest(BaseModel):
+    """
+    Pydantic model for SearchTextRequest with rich validations.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid", str_strip_whitespace=True, populate_by_name=True
+    )
+
+    # Required field
+    text_query: str = Field(
+        ..., min_length=1, description="Required. The text query for textual search."
+    )
+
+    # Localization
+    language_code: Optional[str] = Field(
+        default=None,
+        description="Place details will be displayed with the preferred language if available.",
+    )
+    region_code: Optional[str] = Field(
+        default=None,
+        description="The Unicode country/region code (CLDR) of the location.",
+    )
+
+    # Ranking and type filtering
+    rank_preference: Optional[RankPreference] = Field(
+        default=None, description="How results will be ranked in the response."
+    )
+    included_type: Optional[str] = Field(
+        default=None,
+        description="The requested place type. Only support one included type.",
+    )
+    strict_type_filtering: bool = Field(
+        default=False,
+        description="Used to set strict type filtering for included_type.",
+    )
+
+    # Filters
+    open_now: bool = Field(
+        default=False,
+        description="Used to restrict the search to places that are currently open.",
+    )
+    min_rating: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=5,
+        description="Filter out results whose average user rating is strictly less than this limit.",
+    )
+    max_result_count: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Maximum number of results to return. Must be between 1 and 20.",
+    )
+    price_levels: list[PriceLevel] = Field(
+        default_factory=list,
+        description="Used to restrict the search to places that are marked as certain price levels.",
+    )
+
+    # Location constraints (mutually exclusive)
+    location_bias: Optional[SearchTextLocationBias] = Field(
+        default=None,
+        description="The region to search. This location serves as a bias.",
+    )
+    location_restriction: Optional[SearchTextLocationRestriction] = Field(
+        default=None,
+        description="The region to search. This location serves as a restriction.",
+    )
+
+    # Advanced options
+    ev_options: Optional[EVOptions] = Field(
+        default=None,
+        description="Set the searchable EV options of a place search request.",
+    )
+    routing_parameters: Optional[RoutingParameters] = Field(
+        default=None, description="Additional parameters for routing to results."
+    )
+    search_along_route_parameters: Optional[SearchAlongRouteParameters] = Field(
+        default=None, description="Additional parameters for searching along a route."
+    )
+    include_pure_service_area_businesses: bool = Field(
+        default=False,
+        description="Include pure service area businesses if the field is set to true.",
+    )
+
+    # Field validators
+    @field_validator("language_code")
+    @classmethod
+    def _validate_language_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not BCP47.match(v):
+            raise ValueError(
+                "language_code must be a valid BCP-47 tag (e.g., 'en', 'en-US', 'zh-Hant')."
+            )
+        return v
+
+    @field_validator("region_code")
+    @classmethod
+    def _validate_region_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v2 = v.upper()
+        if not CLDR_REGION_2.fullmatch(v2):
+            raise ValueError(
+                "region_code must be a two-letter CLDR region code (e.g., 'US', 'GB')."
+            )
+        return v2
+
+    @field_validator("included_type")
+    @classmethod
+    def _validate_included_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not PLACE_TYPE.match(v):
+            raise ValueError(
+                f"Invalid place type '{v}'. Use lowercase letters, digits, and underscores."
+            )
+        return v
+
+    @field_validator("min_rating")
+    @classmethod
+    def _validate_min_rating(cls, v: Optional[float]) -> Optional[float]:
+        if v is None:
+            return v
+        # Round up to nearest 0.5 as per Google's specification
+        import math
+
+        return math.ceil(v * 2) / 2
+
+    @field_validator("price_levels")
+    @classmethod
+    def _validate_price_levels(cls, v: list[PriceLevel]) -> list[PriceLevel]:
+        # Remove duplicates while preserving order
+        seen = set()
+        cleaned = []
+        for level in v:
+            if level not in seen:
+                cleaned.append(level)
+                seen.add(level)
+        return cleaned
+
+    # Cross-field validation
+    @model_validator(mode="after")
+    def _validate_cross_fields(self) -> Self:
+        # Mutually exclusive location constraints
+        if self.location_bias is not None and self.location_restriction is not None:
+            raise ValueError(
+                "Cannot set both location_bias and location_restriction. Choose one."
+            )
+        return self
+
+
+class SearchTextResponse(BaseModel):
+    """Response proto for SearchText."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    places: list[GooglePlace] = Field(
+        default_factory=list,
+        description="A list of places that meet the user's text search criteria.",
+    )
+
+
+class Airport(BaseModel):
+    """Airport result from the Google Places API."""
+
+    name: str = Field(..., description="Name of the airport")
+    city: str = Field(..., description="City of the airport")
+    iata_code: Optional[str] = Field(
+        None, description="IATA airport code if applicable"
+    )
+    icao_code: Optional[str] = Field(
+        None, description="ICAO airport code if applicable"
+    )
+    confidence: float = Field(..., description="Search result confidence score")

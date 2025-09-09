@@ -5,7 +5,7 @@ from ._version import __version__
 # Default API configuration
 DEFAULT_BASE_URL = "https://www.bookalimo.com/web/api"
 DEFAULT_TIMEOUT = 5.0
-DEFAULT_USER_AGENT = f"bookalimo-python/{__version__} (+https://github.com/asparagusbeef/bookalimo-python)"
+DEFAULT_USER_AGENT = f"bookalimo-python/{__version__}"
 
 # Default retry configuration
 DEFAULT_RETRIES = 2

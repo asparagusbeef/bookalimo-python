@@ -27,11 +27,37 @@ async with AsyncBookalimo(
 # Find airports
 airports = await client.places.search("JFK airport")
 
-# Find addresses  
+# Find addresses
 addresses = await client.places.search("Empire State Building")
 
 # Find restaurants
 restaurants = await client.places.search("restaurants near Times Square")
+```
+
+### Airport Resolution
+
+For better airport matching with confidence scoring:
+
+```python
+# Resolve airports with advanced matching
+airports = await client.places.resolve_airport(
+    query="JFK New York international",
+    max_distance_km=50,
+    max_results=3,
+    confidence_threshold=0.8
+)
+
+for airport in airports:
+    print(f"{airport.name} ({airport.iata_code})")
+    print(f"  Confidence: {airport.confidence:.2f}")
+
+# Use the best match
+if airports:
+    best_airport = airports[0]
+    airport_location = Location(
+        type=LocationType.AIRPORT,
+        airport=Airport(iata_code=best_airport.iata_code)
+    )
 ```
 
 ### Address Autocomplete
@@ -73,19 +99,36 @@ location = create_booking_location(places[0])
 ## Complete Booking Example
 
 ```python
+from bookalimo.schemas.booking import Location, LocationType, Address, Airport, RateType
+
 async def book_with_places():
     async with AsyncBookalimo(
         credentials=credentials,
         google_places_api_key="your-key"
     ) as client:
-        # Find locations
-        pickup_places = await client.places.search("JFK Airport")
+        # Use airport resolution for better airport matching
+        airports = await client.places.resolve_airport(
+            query="JFK Airport Terminal 4",
+            max_results=1
+        )
+
+        # Find destination
         dropoff_places = await client.places.search("Times Square")
-        
+
         # Convert to booking locations
-        pickup = create_booking_location(pickup_places[0])
+        if airports:
+            # Use resolved airport
+            pickup = Location(
+                type=LocationType.AIRPORT,
+                airport=Airport(iata_code=airports[0].iata_code)
+            )
+        else:
+            # Fallback to regular search
+            pickup_places = await client.places.search("JFK Airport")
+            pickup = create_booking_location(pickup_places[0])
+
         dropoff = create_booking_location(dropoff_places[0])
-        
+
         # Book normally
         quote = await client.pricing.quote(
             rate_type=RateType.P2P,
@@ -95,11 +138,11 @@ async def book_with_places():
             passengers=2,
             luggage=2
         )
-        
+
         booking = await client.reservations.book(
             token=quote.token,
             method="charge"
         )
-        
+
         return booking.reservation_id
 ```

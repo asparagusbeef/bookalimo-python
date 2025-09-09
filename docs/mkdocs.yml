@@ -7,7 +7,7 @@ repo_name: asparagusbeef/bookalimo-python
 repo_url: https://github.com/asparagusbeef/bookalimo-python
 
 nav:
-  - Home: index.md
+  - Home: README.md
   - User Guide:
     - Quick Start: guide/quickstart.md
     - Authentication: guide/auth.md
@@ -37,8 +37,8 @@ nav:
     - Basic Usage: examples/basic.md
     - Async Usage: examples/async.md
     - Google Places: examples/places.md
-  - Contributing: ../CONTRIBUTING.md
-  - Changelog: ../CHANGELOG.md
+  - Contributing: ./CONTRIBUTING.md
+  - Changelog: ./CHANGELOG.md
 
 theme:
   name: material

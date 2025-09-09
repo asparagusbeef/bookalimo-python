@@ -32,11 +32,9 @@ Default request timeout in seconds.
 
 #### DEFAULT_USER_AGENT
 ```python
-DEFAULT_USER_AGENT = f"bookalimo-python/{__version__} (+https://github.com/asparagusbeef/bookalimo-python)"
+DEFAULT_USER_AGENT = f"bookalimo-python/{__version__}"
 ```
 Default User-Agent header sent with all requests.
-
-**Format:** `bookalimo-python/{version} (+repository_url)`
 
 **Usage:**
 - Identifies SDK version to API servers
@@ -56,7 +54,7 @@ Default maximum number of retry attempts for failed requests.
 - Applied to transient failures (network errors, 5xx status codes)
 - Can be overridden in transport constructors
 
-#### DEFAULT_BACKOFF  
+#### DEFAULT_BACKOFF
 ```python
 DEFAULT_BACKOFF = 0.3
 ```
@@ -81,7 +79,7 @@ HTTP status codes that trigger automatic retries.
 
 **Status Codes:**
 - `500` - Internal Server Error
-- `502` - Bad Gateway  
+- `502` - Bad Gateway
 - `503` - Service Unavailable
 - `504` - Gateway Timeout
 
@@ -113,7 +111,7 @@ transport = AsyncTransport(
     timeouts=httpx.Timeout(
         connect=5.0,    # Connection establishment
         read=30.0,      # Reading response data
-        write=5.0,      # Sending request data  
+        write=5.0,      # Sending request data
         pool=2.0        # Getting connection from pool
     )
 )
@@ -248,7 +246,7 @@ from bookalimo import AsyncBookalimo
 # Simple load balancing across endpoints
 ENDPOINTS = [
     "https://api1.bookalimo.com/web/api",
-    "https://api2.bookalimo.com/web/api", 
+    "https://api2.bookalimo.com/web/api",
     "https://api3.bookalimo.com/web/api"
 ]
 
@@ -292,15 +290,15 @@ def validate_config(base_url: str, timeout: float, retries: int):
     # URL validation
     if not base_url.startswith(('http://', 'https://')):
         raise ValueError("base_url must be a valid HTTP(S) URL")
-    
-    # Timeout validation  
+
+    # Timeout validation
     if timeout <= 0:
         raise ValueError("timeout must be positive")
-    
+
     # Retry validation
     if retries < 0:
         raise ValueError("retries must be non-negative")
-    
+
     # Test connectivity
     try:
         with httpx.Client(timeout=timeout) as client:
@@ -329,7 +327,7 @@ class BookalimoConfig:
     retries: int = 2
     backoff: float = 0.3
     user_agent: Optional[str] = None
-    
+
     def create_client(self, credentials):
         """Create client with this configuration."""
         from bookalimo import AsyncBookalimo

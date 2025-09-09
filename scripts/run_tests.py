@@ -11,10 +11,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
 
-def run_command(cmd: List[str], description: str, check: bool = True) -> int:
+def run_command(cmd: list[str], description: str, check: bool = True) -> int:
     """Run a command and return the exit code."""
     print(f"\n{'=' * 60}")
     print(f"🚀 {description}")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional
+from enum import IntEnum
+from typing import Optional
 
 from pydantic import (
     AnyUrl,
@@ -24,6 +25,7 @@ from .common import (
     EVChargeOptions,
     FuelOptions,
     LatLng,
+    LocalizedText,
     OpeningHours,
     ParkingOptions,
     PaymentOptions,
@@ -38,7 +40,7 @@ from .common import (
 )
 
 
-class PriceLevel(int):
+class PriceLevel(IntEnum):
     PRICE_LEVEL_UNSPECIFIED = 0
     PRICE_LEVEL_FREE = 1
     PRICE_LEVEL_INEXPENSIVE = 2
@@ -47,7 +49,7 @@ class PriceLevel(int):
     PRICE_LEVEL_VERY_EXPENSIVE = 5
 
 
-class BusinessStatus(int):
+class BusinessStatus(IntEnum):
     BUSINESS_STATUS_UNSPECIFIED = 0
     OPERATIONAL = 1
     CLOSED_TEMPORARILY = 2
@@ -59,12 +61,14 @@ class AddressComponent(BaseModel):
 
     long_text: str
     short_text: Optional[str] = None
-    types: List[str] = Field(default_factory=list)
+    types: list[str] = Field(
+        default_factory=list
+    )  # limited to https://developers.google.com/maps/documentation/places/web-service/place-types
     language_code: Optional[str] = None
 
     @field_validator("types")
     @classmethod
-    def _types(cls, v: List[str]) -> List[str]:
+    def _types(cls, v: list[str]) -> list[str]:
         out, seen = [], set()
         for raw in v:
             t = raw.strip()
@@ -114,13 +118,6 @@ class NeighborhoodSummary(BaseModel):
     disclosure_text: Optional[LocalizedText] = None
 
 
-class LocalizedText(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    text: str
-    language_code: str
-
-
 class ContainingPlace(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -148,7 +145,7 @@ class ContainingPlace(BaseModel):
         return self
 
 
-class Place(BaseModel):
+class GooglePlace(BaseModel):
     model_config = ConfigDict(extra="allow", str_strip_whitespace=True)
 
     # Identity
@@ -157,7 +154,7 @@ class Place(BaseModel):
 
     # Labels & typing
     display_name: Optional[LocalizedText] = None
-    types: List[str] = Field(default_factory=list)
+    types: list[str] = Field(default_factory=list)
     primary_type: Optional[str] = None
     primary_type_display_name: Optional[LocalizedText] = None
 
@@ -165,9 +162,10 @@ class Place(BaseModel):
     national_phone_number: Optional[str] = None
     international_phone_number: Optional[str] = None
     formatted_address: Optional[str] = None
+    address_descriptor: Optional[AddressDescriptor] = None
     short_formatted_address: Optional[str] = None
     postal_address: Optional[PostalAddress] = None
-    address_components: List[AddressComponent] = Field(default_factory=list)
+    address_components: list[AddressComponent] = Field(default_factory=list)
     plus_code: Optional[PlusCode] = None
 
     # Location & map
@@ -178,22 +176,22 @@ class Place(BaseModel):
     rating: Optional[float] = None
     google_maps_uri: Optional[AnyUrl] = None
     website_uri: Optional[AnyUrl] = None
-    reviews: List[Review] = Field(default_factory=list)
-    photos: List[Photo] = Field(default_factory=list)
+    reviews: list[Review] = Field(default_factory=list)
+    photos: list[Photo] = Field(default_factory=list)
 
     # Hours
     regular_opening_hours: Optional[OpeningHours] = None
     current_opening_hours: Optional[OpeningHours] = None
-    current_secondary_opening_hours: List[OpeningHours] = Field(default_factory=list)
-    regular_secondary_opening_hours: List[OpeningHours] = Field(default_factory=list)
+    current_secondary_opening_hours: list[OpeningHours] = Field(default_factory=list)
+    regular_secondary_opening_hours: list[OpeningHours] = Field(default_factory=list)
     utc_offset_minutes: Optional[int] = None
     time_zone: Optional[TimeZone] = None
 
     # Misc attributes
     adr_format_address: Optional[str] = None
-    business_status: Optional[int] = None
-    price_level: Optional[int] = None
-    attributions: List[Attribution] = Field(default_factory=list)
+    business_status: Optional[BusinessStatus] = None
+    price_level: Optional[PriceLevel] = None
+    attributions: list[Attribution] = Field(default_factory=list)
     user_rating_count: Optional[int] = None
     icon_mask_base_uri: Optional[AnyUrl] = None
     icon_background_color: Optional[str] = None
@@ -227,7 +225,7 @@ class Place(BaseModel):
     # Options & related places
     payment_options: Optional[PaymentOptions] = None
     parking_options: Optional[ParkingOptions] = None
-    sub_destinations: List[SubDestination] = Field(default_factory=list)
+    sub_destinations: list[SubDestination] = Field(default_factory=list)
     accessibility_options: Optional[AccessibilityOptions] = None
 
     # Fuel/EV & AI summaries
@@ -239,9 +237,8 @@ class Place(BaseModel):
     neighborhood_summary: Optional[NeighborhoodSummary] = None
 
     # Context
-    containing_places: List[ContainingPlace] = Field(default_factory=list)
+    containing_places: list[ContainingPlace] = Field(default_factory=list)
     pure_service_area_business: Optional[bool] = None
-    address_descriptor: Optional[AddressDescriptor] = None
     price_range: Optional[PriceRange] = None
 
     # ---------- Validators ----------
@@ -273,7 +270,7 @@ class Place(BaseModel):
 
     @field_validator("types")
     @classmethod
-    def _types(cls, v: List[str]) -> List[str]:
+    def _types(cls, v: list[str]) -> list[str]:
         out, seen = [], set()
         for raw in v:
             t = raw.strip()
@@ -324,14 +321,14 @@ class Place(BaseModel):
 
     @field_validator("reviews")
     @classmethod
-    def _max_reviews(cls, v: List[Review]) -> List[Review]:
+    def _max_reviews(cls, v: list[Review]) -> list[Review]:
         if len(v) > 5:
             raise ValueError("reviews can contain at most 5 items")
         return v
 
     @field_validator("photos")
     @classmethod
-    def _max_photos(cls, v: List[Photo]) -> List[Photo]:
+    def _max_photos(cls, v: list[Photo]) -> list[Photo]:
         if len(v) > 10:
             raise ValueError("photos can contain at most 10 items")
         return v

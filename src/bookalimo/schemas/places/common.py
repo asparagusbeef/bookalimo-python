@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from enum import IntEnum
 from typing import Optional
 
 from pydantic import (
@@ -40,7 +41,24 @@ BASE64URL_36 = re.compile(
 )  # up to 36 chars, URL-safe base64-ish
 
 
-# ---------- “External” Google message wrappers ----------
+# ---------- Fundamental types ----------
+class LocalizedText(BaseModel):
+    """Localized text with language code."""
+
+    model_config = ConfigDict(extra="allow")
+
+    text: str
+    language_code: str
+
+    @field_validator("language_code")
+    @classmethod
+    def _language_code(cls, v: str) -> str:
+        if not BCP47.match(v):
+            raise ValueError("language_code must be a valid BCP-47 language tag")
+        return v
+
+
+# ---------- "External" Google message wrappers ----------
 class ExternalModel(BaseModel):
     """Permissive wrapper for Google messages we don't model in detail."""
 
@@ -77,7 +95,142 @@ class FuelOptions(ExternalModel): ...
 class EVChargeOptions(ExternalModel): ...
 
 
-class AddressDescriptor(ExternalModel): ...
+class AddressDescriptor(BaseModel):
+    """A relational description of a location with nearby landmarks and containing areas."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    class Landmark(BaseModel):
+        """Basic landmark information and relationship with target location."""
+
+        model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+        class SpatialRelationship(IntEnum):
+            """Spatial relationship between target location and landmark."""
+
+            NEAR = 0
+            WITHIN = 1
+            BESIDE = 2
+            ACROSS_THE_ROAD = 3
+            DOWN_THE_ROAD = 4
+            AROUND_THE_CORNER = 5
+            BEHIND = 6
+
+        name: str = Field(..., description="Landmark's resource name")
+        place_id: str = Field(..., description="Landmark's place ID")
+        display_name: LocalizedText = Field(..., description="Landmark's display name")
+        types: list[str] = Field(
+            default_factory=list, description="Type tags for landmark"
+        )
+        spatial_relationship: SpatialRelationship = Field(
+            default=SpatialRelationship.NEAR,
+            description="Spatial relationship to target",
+        )
+        straight_line_distance_meters: float = Field(
+            ..., ge=0.0, description="Straight line distance in meters"
+        )
+        travel_distance_meters: Optional[float] = Field(
+            default=None,
+            ge=0.0,
+            description="Travel distance in meters along road network",
+        )
+
+        @field_validator("name")
+        @classmethod
+        def _name(cls, v: str) -> str:
+            if not PLACE_RESOURCE.fullmatch(v):
+                raise ValueError("name must be in the form 'places/{place_id}'")
+            return v
+
+        @field_validator("place_id")
+        @classmethod
+        def _place_id(cls, v: str) -> str:
+            if not PLACE_ID.fullmatch(v):
+                raise ValueError("place_id must be a valid Place ID")
+            return v
+
+        @field_validator("types")
+        @classmethod
+        def _types(cls, v: list[str]) -> list[str]:
+            out, seen = [], set()
+            for raw in v:
+                t = raw.strip()
+                if not t:
+                    raise ValueError("types cannot contain empty strings")
+                if not PLACE_TYPE.fullmatch(t):
+                    raise ValueError(f"invalid place type '{t}'")
+                if t not in seen:
+                    out.append(t)
+                    seen.add(t)
+            return out
+
+        @model_validator(mode="after")
+        def _name_id_consistency(self) -> Self:
+            if self.name.split("/", 1)[1] != self.place_id:
+                raise ValueError("place_id must match the trailing component of name")
+            return self
+
+    class Area(BaseModel):
+        """Area information and relationship with target location."""
+
+        model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+        class Containment(IntEnum):
+            """Spatial relationship between target location and area."""
+
+            CONTAINMENT_UNSPECIFIED = 0
+            WITHIN = 1
+            OUTSKIRTS = 2
+            NEAR = 3
+
+        name: str = Field(..., description="Area's resource name")
+        place_id: str = Field(..., description="Area's place ID")
+        display_name: LocalizedText = Field(..., description="Area's display name")
+        containment: Containment = Field(
+            default=Containment.CONTAINMENT_UNSPECIFIED,
+            description="Spatial relationship to target",
+        )
+
+        @field_validator("name")
+        @classmethod
+        def _name(cls, v: str) -> str:
+            if not PLACE_RESOURCE.fullmatch(v):
+                raise ValueError("name must be in the form 'places/{place_id}'")
+            return v
+
+        @field_validator("place_id")
+        @classmethod
+        def _place_id(cls, v: str) -> str:
+            if not PLACE_ID.fullmatch(v):
+                raise ValueError("place_id must be a valid Place ID")
+            return v
+
+        @model_validator(mode="after")
+        def _name_id_consistency(self) -> Self:
+            if self.name.split("/", 1)[1] != self.place_id:
+                raise ValueError("place_id must match the trailing component of name")
+            return self
+
+    landmarks: list[Landmark] = Field(
+        default_factory=list, description="Ranked list of nearby landmarks"
+    )
+    areas: list[Area] = Field(
+        default_factory=list, description="Ranked list of containing or adjacent areas"
+    )
+
+    @field_validator("landmarks")
+    @classmethod
+    def _max_landmarks(cls, v: list[Landmark]) -> list[Landmark]:
+        if len(v) > 10:  # Reasonable limit for API responses
+            raise ValueError("landmarks can contain at most 10 items")
+        return v
+
+    @field_validator("areas")
+    @classmethod
+    def _max_areas(cls, v: list[Area]) -> list[Area]:
+        if len(v) > 10:  # Reasonable limit for API responses
+            raise ValueError("areas can contain at most 10 items")
+        return v
 
 
 class PriceRange(ExternalModel): ...

@@ -91,8 +91,13 @@ async with AsyncBookalimo(
     credentials=credentials,
     google_places_api_key="your-google-places-key"
 ) as client:
-    # Search for locations
-    pickup_results = await client.places.search("JFK Airport")
+    # Advanced airport resolution - If IATA code is unknown
+    airports = await client.places.resolve_airport(
+        query="kennedy", # Top result will be JFK
+        max_results=1
+    )
+
+    # Regular place search
     dropoff_results = await client.places.search("Empire State Building")
 
     # Convert to booking locations and proceed with booking...
@@ -194,7 +199,7 @@ export GOOGLE_PLACES_API_KEY="your_google_places_key"
 - **GitHub**: [asparagusbeef/bookalimo-python](https://github.com/asparagusbeef/bookalimo-python)
 - **PyPI**: [bookalimo](https://pypi.org/project/bookalimo/)
 - **Issues**: [GitHub Issues](https://github.com/asparagusbeef/bookalimo-python/issues)
-- **Changelog**: [CHANGELOG.md](../CHANGELOG.md)
+- **Changelog**: [CHANGELOG.md](./CHANGELOG.md)
 
 ## License
 

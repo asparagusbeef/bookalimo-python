@@ -7,14 +7,14 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write  # needed for mkdocs gh-deploy to push to gh-pages
+  contents: write
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v5
 
@@ -90,6 +90,13 @@ jobs:
             "mkdocstrings[python]" \
             mkdocs-autorefs \
             ruff
+
+      - name: Copy CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md and README.md to docs/
+        run: |
+            cp CHANGELOG.md docs/CHANGELOG.md
+            cp CONTRIBUTING.md docs/CONTRIBUTING.md
+            cp CODE_OF_CONDUCT.md docs/CODE_OF_CONDUCT.md
+            cp README.md docs/README.md
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force -f ./docs/mkdocs.yml

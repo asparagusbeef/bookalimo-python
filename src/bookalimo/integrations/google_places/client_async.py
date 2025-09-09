@@ -1,30 +1,35 @@
 from __future__ import annotations
 
-import re
+import asyncio
 from os import getenv
 from types import TracebackType
 from typing import Any, Optional, TypeVar, cast
 
 import httpx
 from google.api_core import exceptions as gexc
-from google.api_core.client_options import ClientOptions
 from google.maps.places_v1 import PlacesAsyncClient
 from typing_extensions import ParamSpec
 
 from ...exceptions import BookalimoError
 from ...logging import get_logger
 from ...schemas.places import google as models
-from ...schemas.places.place import Place as GooglePlace
 from .common import (
-    ADDRESS_TYPES,
     DEFAULT_PLACE_FIELDS,
     DEFAULT_PLACE_LIST_FIELDS,
     Fields,
     PlaceListFields,
+    build_get_place_request,
+    build_search_request_params,
+    derive_effective_query,
     fmt_exc,
     mask_header,
+    normalize_place_from_proto,
+    normalize_search_results,
+    validate_resolve_airport_inputs,
 )
 from .proto_adapter import validate_proto_to_model
+from .resolve_airport import resolve_airport
+from .transports import GoogleAsyncTransport
 
 logger = get_logger("places")
 
@@ -32,40 +37,9 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def _strip_html(s: str) -> str:
-    # Simple fallback for adr_format_address (which is HTML)
-    return re.sub(r"<[^>]+>", "", s) if s else s
-
-
-def _infer_place_type(m: GooglePlace) -> str:
-    # 1) Airport wins outright
-    tset = set(m.types or [])
-    ptype = (m.primary_type or "").lower() if getattr(m, "primary_type", None) else ""
-    if "airport" in tset or ptype == "airport":
-        return "airport"
-    # 2) Anything that looks like a geocoded address
-    if tset & ADDRESS_TYPES:
-        return "address"
-    # 3) Otherwise treat as a point of interest
-    return "poi"
-
-
-def _get_lat_lng(model: GooglePlace) -> tuple[float, float]:
-    if model.location:
-        lat = model.location.latitude
-        lng = model.location.longitude
-    elif model.viewport:
-        lat = model.viewport.low.latitude
-        lng = model.viewport.low.longitude
-    else:
-        lat = 0
-        lng = 0
-    return lat, lng
-
-
 class AsyncGooglePlaces:
     """
-    Google Places API client for address validation, geocoding, and autocomplete.
+    Google Places API asynchronous client for address validation, geocoding, and autocomplete.
     Provides location resolution services that integrate seamlessly with
     Book-A-Limo location factory functions.
     """
@@ -84,15 +58,10 @@ class AsyncGooglePlaces:
             http_client: Optional `httpx.AsyncClient` instance.
         """
         self.http_client = http_client or httpx.AsyncClient()
-        if client:
-            self.client = client
-        else:
-            api_key = api_key or getenv("GOOGLE_PLACES_API_KEY")
-            if not api_key:
-                raise ValueError("Google Places API key is required.")
-            self.client = PlacesAsyncClient(
-                client_options=ClientOptions(api_key=api_key),
-            )
+        api_key = api_key or getenv("GOOGLE_PLACES_API_KEY")
+        if not api_key:
+            raise ValueError("Google Places API key is required.")
+        self.transport = GoogleAsyncTransport(api_key, client)
 
     async def __aenter__(self) -> AsyncGooglePlaces:
         return self
@@ -108,7 +77,7 @@ class AsyncGooglePlaces:
     async def aclose(self) -> None:
         """Close underlying transports safely."""
         try:
-            await self.client.transport.close()
+            await self.transport.close()
         finally:
             await self.http_client.aclose()
 
@@ -126,7 +95,7 @@ class AsyncGooglePlaces:
             BookalimoError: If the API request fails.
         """
         try:
-            proto = await self.client.autocomplete_places(
+            proto = await self.transport.autocomplete_places(
                 request=request.model_dump(), **kwargs
             )
             return validate_proto_to_model(proto, models.AutocompletePlacesResponse)
@@ -150,51 +119,34 @@ class AsyncGooglePlaces:
 
     async def search(
         self,
-        query: str,
+        query: Optional[str] = None,
         *,
+        request: Optional[models.SearchTextRequest] = None,
         fields: PlaceListFields = DEFAULT_PLACE_LIST_FIELDS,
         **kwargs: Any,
     ) -> list[models.Place]:
         """
-        Search for places using a text query.
+        Search for places using a text query or SearchTextRequest.
         Args:
-            query: The text query to search for.
+            query: Simple text query to search for. Either query or request must be provided.
+            request: SearchTextRequest object with advanced search parameters. Either query or request must be provided.
+            fields: Field mask for response data.
             **kwargs: Additional parameters for the Text Search API.
         Returns:
             list[models.Place]
         Raises:
             BookalimoError: If the API request fails.
+            ValueError: If neither query nor request is provided, or if both are provided.
         """
+        request_params = build_search_request_params(query, request, **kwargs)
         metadata = mask_header(fields)
+
         try:
-            protos = await self.client.search_text(
-                request={"text_query": query, **kwargs},
+            protos = await self.transport.search_text(
+                request=request_params,
                 metadata=metadata,
             )
-            pydantic_models = [
-                validate_proto_to_model(proto, GooglePlace) for proto in protos.places
-            ]
-            place_models: list[models.Place] = []
-            for model in pydantic_models:
-                adr_format = getattr(model, "adr_format_address", None)
-                addr = (
-                    getattr(model, "formatted_address", None)
-                    or getattr(model, "short_formatted_address", None)
-                    or _strip_html(adr_format or "")
-                    or ""
-                )
-                lat, lng = _get_lat_lng(model)
-                place_models.append(
-                    models.Place(
-                        formatted_address=addr,
-                        lat=lat,
-                        lng=lng,
-                        place_type=_infer_place_type(model),
-                        iata_code=None,
-                        google_place=model,
-                    )
-                )
-            return place_models
+            return normalize_search_results(protos)
         except gexc.InvalidArgument as e:
             # Often caused by missing/invalid field mask
             msg = f"Google Places Text Search invalid argument: {fmt_exc(e)}"
@@ -207,45 +159,32 @@ class AsyncGooglePlaces:
 
     async def get(
         self,
-        place_id: models.GetPlaceRequest,
+        place_id: Optional[str] = None,
         *,
+        request: Optional[models.GetPlaceRequest] = None,
         fields: Fields = DEFAULT_PLACE_FIELDS,
-        **kwargs: Any,
     ) -> Optional[models.Place]:
         """
         Get details for a specific place.
         Args:
             place_id: The ID of the place to retrieve details for.
-            **kwargs: Additional parameters for the Get Place API.
+            request: GetPlaceRequest object with place resource name.
+            fields: Optional field mask for response data.
         Returns:
             A models.Place object or None if not found.
         Raises:
+            ValueError: If neither place_id nor request is provided.
             BookalimoError: If the API request fails.
         """
+        request_params = build_get_place_request(place_id, request)
         metadata = mask_header(fields)
+
         try:
-            proto = await self.client.get_place(
-                request={"name": f"places/{place_id}", **kwargs},
+            proto = await self.transport.get_place(
+                request=request_params,
                 metadata=metadata,
             )
-            # Convert proto to GooglePlace first, then process like search
-            model = validate_proto_to_model(proto, GooglePlace)
-            adr_format = getattr(model, "adr_format_address", None)
-            addr = (
-                getattr(model, "formatted_address", None)
-                or getattr(model, "short_formatted_address", None)
-                or _strip_html(adr_format or "")
-                or ""
-            )
-            lat, lng = _get_lat_lng(model)
-            return models.Place(
-                formatted_address=addr,
-                lat=lat,
-                lng=lng,
-                place_type=_infer_place_type(model),
-                iata_code=None,
-                google_place=model,
-            )
+            return normalize_place_from_proto(proto)
         except gexc.NotFound:
             return None
         except gexc.InvalidArgument as e:
@@ -256,3 +195,81 @@ class AsyncGooglePlaces:
             msg = f"Google Places Get Place failed: {fmt_exc(e)}"
             logger.error(msg)
             raise BookalimoError(msg) from e
+
+    async def resolve_airport(
+        self,
+        query: Optional[str] = None,
+        place_id: Optional[str] = None,
+        places: Optional[list[models.Place]] = None,
+        max_distance_km: Optional[float] = 100,
+        max_results: Optional[int] = 5,
+        confidence_threshold: Optional[float] = 1,
+    ) -> list[models.Airport]:
+        """
+        Resolve airport candidates given either a text query, a place_id, or a list of Places.
+
+        Rules:
+        - Provide at most one of {place_id, places}. (query may accompany either.)
+        - If nothing but query is given, search for places from the query.
+        - If place_id is given:
+            * Fetch the place.
+            * If no explicit query, derive it from the place's display name.
+        - If places is given:
+            * If len(places) == 0 and no query, error.
+            * If len(places) == 1 and no query, derive query from that place's display name.
+            * If len(places) > 1 and no query, error (need query to disambiguate).
+        - If nothing is provided, error.
+        - If max_distance_km is provided, it must be > 0.
+
+        Returns:
+            list[models.Airport]
+        Raises:
+            ValueError on invalid inputs.
+            BookalimoError if underlying API requests fail.
+        """
+        # Validate inputs
+        validate_resolve_airport_inputs(place_id, places, max_distance_km)
+
+        # Establish the authoritative places list
+        effective_places: list[models.Place]
+
+        if place_id is not None:
+            place = await self.get(place_id=place_id)
+            if place is None:
+                raise ValueError(f"Place with id {place_id!r} was not found.")
+            effective_places = [place]
+
+        elif places is not None:
+            if len(places) == 0 and (query is None or not str(query).strip()):
+                raise ValueError(
+                    "Empty 'places' and no 'query' provided; nothing to resolve."
+                )
+            effective_places = places
+
+        else:
+            # Neither place_id nor places: fall back to query-driven search
+            if query is None or not str(query).strip():
+                raise ValueError("Either place_id, places, or query must be provided.")
+            effective_places = await self.search(
+                request=models.SearchTextRequest(
+                    text_query=str(query).strip(),
+                    max_result_count=5,
+                )
+            )
+
+        # Derive effective query
+        effective_query = derive_effective_query(query, effective_places)
+
+        google_places = [
+            p.google_place for p in effective_places if p.google_place is not None
+        ]
+
+        # Use asyncio.to_thread for CPU-bound work
+        return await asyncio.to_thread(
+            resolve_airport,
+            effective_query,
+            google_places,
+            max_distance_km,
+            max_results,
+            confidence_threshold,
+        )

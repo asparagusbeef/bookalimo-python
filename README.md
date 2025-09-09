@@ -1,21 +1,32 @@
 # Bookalimo Python SDK
 
 [![codecov](https://codecov.io/gh/asparagusbeef/bookalimo-python/branch/main/graph/badge.svg?token=H588J8Q1M8)](https://codecov.io/gh/asparagusbeef/bookalimo-python)
-[![Documentation Status](https://readthedocs.org/projects/bookalimo-python/badge/?version=latest)](https://bookalimo-python.readthedocs.io/en/latest/?badge=latest)
+[![Docs](https://img.shields.io/github/deployments/asparagusbeef/bookalimo-python/github-pages?label=docs&logo=github)](https://asparagusbeef.github.io/bookalimo-python)
 [![PyPI version](https://badge.fury.io/py/bookalimo.svg)](https://badge.fury.io/py/bookalimo)
 [![Python Support](https://img.shields.io/pypi/pyversions/bookalimo.svg)](https://pypi.org/project/bookalimo/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Python client library for the Book-A-Limo transportation booking API with async/sync support, type safety, and Google Places integration.
+Python client library for the Book-A-Limo transportation booking API with async/sync support, type safety, Google Places integration, and ergonomic resource management via context managers.
+
+## Important notes
+
+- **Unofficial & community-maintained**: This SDK is not affiliated with or sponsored by Book-A-Limo. API changes may break functionality.
+- **Docs are in preview**: Many pages were AI-generated from the codebase and haven’t had a full manual review yet. In case of conflict, the code and docstrings are the source of truth. Please [report issues](https://github.com/asparagusbeef/bookalimo-python/issues) you find.
+- **Terms & credentials**: Use of Book-A-Limo API and Google APIs are subject to their respective Terms of Service.
+
+## Design philosophy: IDE-first DX
+
+The library is **comprehensively typed** and **richly documented** via docstrings. Most users can rely on IDE hints and autocomplete without reading the docs.
 
 ## Features
 
-- **Async & Sync Support** - Choose the right client for your use case
-- **Type Safety** - Full Pydantic models with validation
-- **Google Places Integration** - Location search and geocoding
-- **Automatic Retry** - Built-in exponential backoff for reliability
-- **Comprehensive Error Handling** - Detailed exceptions with context
+- **Async & Sync Support** – Choose the right client for your use case
+- **Type Safety** – Full Pydantic models with validation
+- **Google Places Integration** – Location search and geocoding
+- **Automatic Retry** – Built-in exponential backoff for reliability
+- **Comprehensive Error Handling** – Detailed exceptions with context
+- **Resource Management** – Context managers for proper cleanup
 
 ## Installation
 
@@ -24,37 +35,44 @@ pip install bookalimo
 
 # With Google Places integration
 pip install bookalimo[places]
-```
+````
 
 ## Core API
 
 ### Clients
-- `AsyncBookalimo` - Async client for high-concurrency applications
-- `Bookalimo` - Sync client for simple scripts and legacy code
+
+* `AsyncBookalimo` – Async client for high-concurrency applications
+* `Bookalimo` – Sync client for simple scripts and legacy code
 
 ### Services
-- `client.pricing` - Get quotes and update booking details
-- `client.reservations` - Book, list, modify, and cancel reservations
-- `client.places` - Google Places search and geocoding (optional)
+
+* `client.pricing` – Get quotes and update booking details
+* `client.reservations` – Book, list, modify, and cancel reservations
+* `client.places` – Google Places search and geocoding (optional)
 
 ### Authentication
+
 SHA256-based credential system with automatic password hashing:
+
 ```python
 from bookalimo.transport.auth import Credentials
 
 # Agency account
-credentials = Credentials.create("AGENCY123", "password", is_customer=False)
+agency = Credentials.create("AGENCY123", "password", is_customer=False)
 
 # Customer account
-credentials = Credentials.create("user@email.com", "password", is_customer=True)
+customer = Credentials.create("user@email.com", "password", is_customer=True)
 ```
 
 ### Booking Flow
-1. **Get Pricing** - `client.pricing.quote()` returns session token + vehicle options
-2. **Update Details** - `client.pricing.update_details()` modifies booking (optional)
-3. **Book Reservation** - `client.reservations.book()` confirms with payment
 
-## Quick Example
+1. **Get Pricing** – `client.pricing.quote()` returns session token + vehicle options
+2. **Update Details** – `client.pricing.update_details()` finalize booking details
+3. **Book Reservation** – `client.reservations.book()` confirms with payment
+
+## Quick Examples
+
+### Async example
 
 ```python
 import asyncio
@@ -63,9 +81,8 @@ from bookalimo.transport.auth import Credentials
 from bookalimo.schemas.booking import RateType, Location, LocationType, Address, City
 
 async def book_ride():
-    credentials = Credentials.create("your_id", "your_password")
+    credentials = Credentials.create("your_id", "your_password", is_customer=False)
 
-    # Define locations
     pickup = Location(
         type=LocationType.ADDRESS,
         address=Address(
@@ -83,7 +100,7 @@ async def book_ride():
     )
 
     async with AsyncBookalimo(credentials=credentials) as client:
-        # 1. Get pricing
+        # 1) Get pricing
         quote = await client.pricing.quote(
             rate_type=RateType.P2P,
             date_time="12/25/2024 03:00 PM",
@@ -93,15 +110,27 @@ async def book_ride():
             luggage=2
         )
 
-        # 2. Book reservation
+        # 2) Book reservation
         booking = await client.reservations.book(
             token=quote.token,
             method="charge"  # or credit_card=CreditCard(...)
         )
-
         return booking.reservation_id
 
 confirmation = asyncio.run(book_ride())
+```
+
+### Sync example
+
+```python
+from bookalimo import Bookalimo
+from bookalimo.transport.auth import Credentials
+
+credentials = Credentials.create("your_id", "your_password", is_customer=False)
+
+with Bookalimo(credentials=credentials) as client:
+    quote = client.pricing.quote(... )
+    booking = client.reservations.book(token=quote.token, method="charge")
 ```
 
 ## Rate Types & Options
@@ -161,7 +190,7 @@ airport_location = Location(
 )
 ```
 
-## Google Places Integration
+## Google Places Integration (Recommended flow)
 
 ```python
 async with AsyncBookalimo(
@@ -171,15 +200,29 @@ async with AsyncBookalimo(
     # Search locations
     results = await client.places.search("JFK Airport Terminal 4")
 
+    # Get the top result
+    top_result = results[0]
+
+    # Get the top result geocode
+
+    # By place_id
+    top_result_place_id = top_result.google_place.id
+    top_result_geocode = await client.places.geocode(place_id=top_result_place_id)
+
+    # By lat-lng
+    top_result_geocode = await client.places.geocode(lat=top_result.lat, lng=top_result.lng)
+
     # Convert to booking location
     location = Location(
         type=LocationType.ADDRESS,
         address=Address(
-            google_geocode=results[0].google_place.model_dump(),
-            place_name=results[0].formatted_address
+            google_geocode=top_result_geocode,
+            place_name=top_result.formatted_address
         )
     )
 ```
+
+*(You can also search independent pickup/dropoff locations and feed them into the booking flow.)*
 
 ## Reservation Management
 
@@ -207,7 +250,11 @@ cancel_result = await client.reservations.edit(
 ## Error Handling
 
 ```python
-from bookalimo.exceptions import BookalimoHTTPError, BookalimoValidationError
+from bookalimo.exceptions import (
+    BookalimoError,            # base SDK error
+    BookalimoHTTPError,        # HTTP/transport errors
+    BookalimoValidationError,  # input/schema validation errors
+)
 
 try:
     booking = await client.reservations.book(...)
@@ -220,30 +267,49 @@ except BookalimoHTTPError as e:
         print("Authentication failed")
     elif e.status_code == 400:
         print(f"Bad request: {e.payload}")
+    else:
+        print(f"API error: {e}")
+except BookalimoError as e:
+    print(f"SDK error: {e}")
 ```
 
 ## Documentation
 
-**📖 [Complete Documentation](https://asparagusbeef.github.io/bookalimo-python)**
+**📖 Complete Documentation:** [https://asparagusbeef.github.io/bookalimo-python](https://asparagusbeef.github.io/bookalimo-python)
 
-- [Quick Start Guide](https://asparagusbeef.github.io/bookalimo-python/guide/quickstart/)
-- [API Reference](https://asparagusbeef.github.io/bookalimo-python/api/)
-- [Examples](https://asparagusbeef.github.io/bookalimo-python/examples/basic/)
+* Quick Start Guide: [https://asparagusbeef.github.io/bookalimo-python/guide/quickstart/](https://asparagusbeef.github.io/bookalimo-python/guide/quickstart/)
+* API Reference: [https://asparagusbeef.github.io/bookalimo-python/api/](https://asparagusbeef.github.io/bookalimo-python/api/)
+* Examples: [https://asparagusbeef.github.io/bookalimo-python/examples/basic/](https://asparagusbeef.github.io/bookalimo-python/examples/basic/)
 
-## Environment Options
+## Environment
 
 ```bash
+# Google Places
 export GOOGLE_PLACES_API_KEY="your_google_places_key"
+
+# SDK logging
 export BOOKALIMO_LOG_LEVEL="DEBUG"
+
+# (Optional) Provide credentials via env vars if your app loads them:
+export BOOKALIMO_USER_ID="your_agency_id_or_email"
+export BOOKALIMO_PASSWORD="your_password"
+export BOOKALIMO_IS_CUSTOMER="false"  # "true" for end-customer accounts
 ```
 
 ## Requirements
 
-- Python 3.9+
-- Book-A-Limo API credentials
-- Dependencies: httpx, pydantic, pycountry, us, airportsdata
-- Optional: google-maps-places (for Places integration)
+* Python 3.9+
+* Book-A-Limo API credentials
+* Dependencies: httpx, pydantic, pycountry, us, airportsdata
+* Optional: google-maps-places (for Places integration)
+
+## Support & Resources
+
+* GitHub: [https://github.com/asparagusbeef/bookalimo-python](https://github.com/asparagusbeef/bookalimo-python)
+* PyPI: [https://pypi.org/project/bookalimo/](https://pypi.org/project/bookalimo/)
+* Issues: [https://github.com/asparagusbeef/bookalimo-python/issues](https://github.com/asparagusbeef/bookalimo-python/issues)
+* Changelog: [CHANGELOG.md](./CHANGELOG.md)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE) for details.

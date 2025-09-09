@@ -8,11 +8,38 @@ Pydantic models for Google Places API integration, providing location search and
 
 ::: bookalimo.schemas.places.PlaceType
 
-Constants for common place types:
+String enumeration for common place types:
 
 - `ADDRESS = "address"` - Street addresses
-- `AIRPORT = "airport"` - Airport locations  
+- `AIRPORT = "airport"` - Airport locations
 - `POI = "poi"` - Points of interest
+
+### RankPreference
+
+::: bookalimo.schemas.places.RankPreference
+
+String enumeration for ranking preferences in SearchTextRequest:
+
+- `RANK_PREFERENCE_UNSPECIFIED = "RANK_PREFERENCE_UNSPECIFIED"` - Default ranking
+- `DISTANCE = "DISTANCE"` - Rank by distance from origin
+- `RELEVANCE = "RELEVANCE"` - Rank by search relevance
+
+### EVConnectorType
+
+::: bookalimo.schemas.places.EVConnectorType
+
+String enumeration for electric vehicle connector types:
+
+- `EV_CONNECTOR_TYPE_UNSPECIFIED = "EV_CONNECTOR_TYPE_UNSPECIFIED"` - Unspecified type
+- `EV_CONNECTOR_TYPE_OTHER = "EV_CONNECTOR_TYPE_OTHER"` - Other connector type
+- `EV_CONNECTOR_TYPE_J1772 = "EV_CONNECTOR_TYPE_J1772"` - J1772 connector
+- `EV_CONNECTOR_TYPE_TYPE_2 = "EV_CONNECTOR_TYPE_TYPE_2"` - Type 2 connector
+- `EV_CONNECTOR_TYPE_CHADEMO = "EV_CONNECTOR_TYPE_CHADEMO"` - CHAdeMO connector
+- `EV_CONNECTOR_TYPE_CCS_COMBO_1 = "EV_CONNECTOR_TYPE_CCS_COMBO_1"` - CCS Combo 1
+- `EV_CONNECTOR_TYPE_CCS_COMBO_2 = "EV_CONNECTOR_TYPE_CCS_COMBO_2"` - CCS Combo 2
+- `EV_CONNECTOR_TYPE_TESLA = "EV_CONNECTOR_TYPE_TESLA"` - Tesla connector
+- `EV_CONNECTOR_TYPE_UNSPECIFIED_GB_T = "EV_CONNECTOR_TYPE_UNSPECIFIED_GB_T"` - GB/T connector
+- `EV_CONNECTOR_TYPE_UNSPECIFIED_WALL_OUTLET = "EV_CONNECTOR_TYPE_UNSPECIFIED_WALL_OUTLET"` - Wall outlet
 
 ### LatLng
 
@@ -95,7 +122,7 @@ Geographic hint to bias search results. Exactly one of `rectangle` or `circle` m
 # Rectangle bias
 bias = LocationBias(rectangle=Viewport(high=..., low=...))
 
-# Circle bias  
+# Circle bias
 bias = LocationBias(circle=Circle(center=..., radius_meters=1000))
 ```
 
@@ -106,6 +133,48 @@ bias = LocationBias(circle=Circle(center=..., radius_meters=1000))
 Geographic restriction to limit search results. Exactly one of `rectangle` or `circle` must be set.
 
 Similar to `LocationBias` but enforces hard boundaries rather than preferences.
+
+### SearchTextLocationBias
+
+::: bookalimo.schemas.places.SearchTextLocationBias
+
+Geographic bias specific to SearchTextRequest. Supports both rectangle and circle constraints.
+
+**Usage:**
+```python
+# Rectangle bias
+bias = SearchTextLocationBias(rectangle=Viewport(high=..., low=...))
+
+# Circle bias
+bias = SearchTextLocationBias(circle=Circle(center=..., radius_meters=1000))
+```
+
+### SearchTextLocationRestriction
+
+::: bookalimo.schemas.places.SearchTextLocationRestriction
+
+Geographic restriction specific to SearchTextRequest. Only supports rectangle constraints.
+
+### EVOptions
+
+::: bookalimo.schemas.places.EVOptions
+
+Electric vehicle charging requirements for place searches.
+
+**Fields:**
+- `minimum_charging_rate_kw`: Minimum charging rate in kilowatts
+- `connector_types`: List of acceptable EV connector types
+
+### RoutingParameters
+
+::: bookalimo.schemas.places.RoutingParameters
+
+Parameters for routing calculations to search results.
+
+**Fields:**
+- `origin`: Explicit routing origin point
+- `travel_mode`: Travel mode ("DRIVE", "WALK", "BICYCLE", "TRANSIT")
+- `routing_preference`: Routing preference type
 
 ## Place Results
 
@@ -119,7 +188,6 @@ Structured place result from Google Places API searches.
 - `formatted_address`: Full formatted address string
 - `lat`/`lng`: Geographic coordinates
 - `place_type`: Type classification (address, airport, poi)
-- `iata_code`: Airport code if applicable
 - `google_place`: Raw Google Places API response
 
 **Computed Properties:**
@@ -127,34 +195,22 @@ Structured place result from Google Places API searches.
 
 ### GooglePlace
 
-::: bookalimo.schemas.places.place.Place
+::: bookalimo.schemas.places.GooglePlace
 
-Comprehensive Google Places API response model with extensive place details.
+Raw Google Places API response model - Pydantic representation of the google [Place](https://developers.google.com/maps/documentation/places/web-service/reference/rest/v1/places) object.
 
-**Core Identity:**
-- `name`: Resource name (`places/{place_id}`)
-- `id`: Place ID
-- `display_name`: Localized place name
-- `types`: Place type classifications
+### Airport
 
-**Location Data:**
-- `formatted_address`: Full formatted address
-- `address_components`: Structured address components
-- `location`: Geographic coordinates
-- `viewport`: Recommended map viewport
+::: bookalimo.schemas.places.Airport
 
-**Business Information:**
-- `rating`: User rating (1.0-5.0)
-- `user_rating_count`: Number of reviews
-- `price_level`: Price range indicator
-- `business_status`: Operational status
+Airport result model with confidence scoring from the resolve_airport functionality.
 
-**Rich Attributes:**
-- `photos`: Place photos (max 10)
-- `reviews`: User reviews (max 5)
-- `opening_hours`: Operating hours
-- `accessibility_options`: Accessibility features
-- `payment_options`: Accepted payment methods
+**Key Fields:**
+- `name`: Airport name
+- `city`: Airport city location
+- `iata_code`: IATA airport code (optional)
+- `icao_code`: ICAO airport code (optional)
+- `confidence`: Search result confidence score (0.0-1.0)
 
 ## Search Requests
 
@@ -219,6 +275,53 @@ Request for detailed place information by place ID.
 **Properties:**
 - `place_id`: Extracted place ID from resource name
 
+### SearchTextRequest
+
+::: bookalimo.schemas.places.SearchTextRequest
+
+Request for Google Places Text Search API with comprehensive filtering and localization options.
+
+**Required Fields:**
+- `text_query`: Search text string (min 1 character)
+
+**Localization:**
+- `language_code`: BCP-47 language tag (e.g., "en-US", "zh-Hant")
+- `region_code`: CLDR region code for localization (e.g., "US", "GB")
+
+**Ranking and Filtering:**
+- `rank_preference`: How results are ranked ("DISTANCE", "RELEVANCE")
+- `included_type`: Single place type filter (e.g., "restaurant", "airport")
+- `strict_type_filtering`: Enforce strict type matching
+
+**Result Constraints:**
+- `open_now`: Restrict to currently open places
+- `min_rating`: Minimum average rating (0.0-5.0, rounded to nearest 0.5)
+- `max_result_count`: Maximum results (1-20)
+- `price_levels`: List of acceptable price levels
+
+**Geographic Constraints (mutually exclusive):**
+- `location_bias`: Geographic hint to bias results
+- `location_restriction`: Hard geographic boundaries
+
+**Advanced Options:**
+- `ev_options`: Electric vehicle charging requirements
+- `routing_parameters`: Routing calculations for distance/time
+- `search_along_route_parameters`: Search along a specific route
+- `include_pure_service_area_businesses`: Include service businesses without physical locations
+
+**Example:**
+```python
+request = SearchTextRequest(
+    text_query="Italian restaurants",
+    included_type="restaurant",
+    open_now=True,
+    min_rating=4.0,
+    max_result_count=10,
+    price_levels=[PriceLevel.PRICE_LEVEL_MODERATE],
+    rank_preference="RELEVANCE"
+)
+```
+
 ### GeocodingRequest
 
 ::: bookalimo.schemas.places.GeocodingRequest
@@ -240,6 +343,16 @@ params = request.to_query_params()  # Returns httpx.QueryParams
 ```
 
 ## Search Responses
+
+### SearchTextResponse
+
+::: bookalimo.schemas.places.SearchTextResponse
+
+Response from Google Places Text Search API.
+
+**Fields:**
+- `places`: List of `GooglePlace` objects matching the search criteria
+
 
 ### AutocompletePlacesResponse
 
@@ -286,14 +399,28 @@ Prediction representing a search query rather than a specific place.
 
 ```python
 from bookalimo.integrations.google_places import AsyncGooglePlaces
+from bookalimo.schemas.places import SearchTextRequest, RankPreference
 
 async with AsyncGooglePlaces(api_key="your-key") as places:
+    # Simple text search
+    results = await places.search("Empire State Building")
+
+    # Advanced search with SearchTextRequest
+    search_request = SearchTextRequest(
+        text_query="restaurants near Times Square",
+        included_type="restaurant",
+        open_now=True,
+        min_rating=4.0,
+        rank_preference=RankPreference.RELEVANCE
+    )
+    results = await places.search(request=search_request)
+
     # Autocomplete search
-    results = await places.autocomplete("Empire State Building")
-    
+    autocomplete_results = await places.autocomplete("Empire State Building")
+
     # Get detailed place info
     place = await places.get_place("places/ChIJ...")
-    
+
     # Geocode address
     geocoded = await places.geocode("1600 Amphitheatre Parkway")
 ```

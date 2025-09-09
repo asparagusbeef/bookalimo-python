@@ -74,7 +74,7 @@ def real_bookalimo_credentials() -> Optional[Credentials]:
         )
     except (json.JSONDecodeError, KeyError, ValueError) as e:
         pytest.fail(f"Invalid BOOKALIMO_TESTING_USER format: {e}")
-        return None
+        raise AssertionError("unreachable") from e
 
 
 @pytest.fixture

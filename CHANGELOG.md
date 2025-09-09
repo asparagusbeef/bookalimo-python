@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.1] - 2025-09-08
+
+### Added
+- **Google Places**: New `resolve_airport()` method for advanced airport resolution with confidence scoring
+- **Google Places**: Support for `SearchTextRequest` objects in `search()` method for advanced filtering
+- **Schemas**: New `Airport` model with text and proximity confidence scores
+- **Schemas**: New `RankPreference` enum for search result ranking (`DISTANCE`, `RELEVANCE`)
+- **Schemas**: New `SearchTextRequest` model with comprehensive search parameters
+- **Schemas**: New `SearchTextResponse` model for text search API responses
+-
+### Changed
+- **BREAKING**: `GooglePlace` model renamed from `Place` in `place.py` for clarity
+- **BREAKING**: Removed `iata_code` field from `Place` model (use `resolve_airport()` instead)
+- **Google Places**: Enhanced `search()` method now accepts either simple queries or `SearchTextRequest` objects
+- **Google Places**: Updated `get()` method to accept optional `GetPlaceRequest` objects instead of raw place IDs for better flexibility
+- **Schemas**: `PlaceType` converted to string enum (`StrEnum`)
+- **Schemas**: `PriceLevel` and `BusinessStatus` converted to integer enums (`IntEnum`)
+- **Schemas**: Enhanced `AddressDescriptor` model with detailed landmark and area information
+- **Common**: Moved shared utilities from client files to `common.py` for better code organization
+- **Documentation**: Updated CI to have docs share README.md, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, and removed index.md from docs folder
+- **Refactor**: Common code from `/integrations/google_places/client_async.py` and `/integrations/google_places/client_sync.py` to `/integrations/google_places/common.py` + created `transports.py` for protocol definition.
 
 ## [1.0.0] - 2025-09-07
 
