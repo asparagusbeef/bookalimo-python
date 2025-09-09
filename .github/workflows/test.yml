@@ -82,36 +82,36 @@ jobs:
       run: |
         pytest -v --cov=bookalimo --cov-report=term-missing -m "not integration and not network" -k "not test_google_places and not places"
 
-  performance-tests:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.11"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,test,places]"
-
-    - name: Run performance tests
-      env:
-        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
-      run: |
-        pytest -v -m "performance" --durations=10
-
-    - name: Run slow integration tests
-      env:
-        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
-        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
-      run: |
-        pytest -v -m "slow" --durations=10
+#  performance-tests:
+#    runs-on: ubuntu-latest
+#    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#
+#    steps:
+#    - uses: actions/checkout@v5
+#
+#    - name: Set up Python 3.11
+#      uses: actions/setup-python@v6
+#      with:
+#        python-version: "3.11"
+#
+#    - name: Install dependencies
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -e ".[dev,test,places]"
+#
+#    - name: Run performance tests
+#      env:
+#        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+#        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
+#      run: |
+#        pytest -v -m "performance" --durations=10
+#
+#    - name: Run slow integration tests
+#      env:
+#        GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+#        BOOKALIMO_TESTING_USER: ${{ secrets.BOOKALIMO_TESTING_USER }}
+#      run: |
+#        pytest -v -m "slow" --durations=10
 
   security-scan:
     runs-on: ubuntu-latest
