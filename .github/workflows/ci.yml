@@ -91,12 +91,13 @@ jobs:
             mkdocs-autorefs \
             ruff
 
-      - name: Copy CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md and README.md to docs/
+      - name: Copy CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md and README.md LICENSE to docs/
         run: |
             cp CHANGELOG.md docs/CHANGELOG.md
             cp CONTRIBUTING.md docs/CONTRIBUTING.md
             cp CODE_OF_CONDUCT.md docs/CODE_OF_CONDUCT.md
             cp README.md docs/README.md
+            cp LICENSE docs/LICENSE
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force -f ./docs/mkdocs.yml

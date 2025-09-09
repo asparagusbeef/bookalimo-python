@@ -21,7 +21,7 @@ nav:
       - Booking Models: api/schemas/booking.md
       - Places Models: api/schemas/places.md
     - Clients:
-      #- Main Clients: api/clients.md
+      - Main Clients: api/clients.md
       - Configuration: api/config.md
     - Services:
       - Pricing Service: api/services/pricing.md
@@ -39,6 +39,8 @@ nav:
     - Google Places: examples/places.md
   - Contributing: ./CONTRIBUTING.md
   - Changelog: ./CHANGELOG.md
+  - Code of Conduct: ./CODE_OF_CONDUCT.md
+  - License: ./LICENSE
 
 theme:
   name: material
