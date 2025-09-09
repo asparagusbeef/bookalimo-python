@@ -10,6 +10,7 @@ from importlib.resources import files
 from typing import Any, Optional, cast
 
 import numpy as np
+from numpy.typing import NDArray
 from rapidfuzz import fuzz, process
 
 from bookalimo.schemas.places import GooglePlace, ResolvedAirport
@@ -47,16 +48,19 @@ def _norm(s: Optional[str]) -> str:
 
 
 def _haversine_km_scalar_to_many(
-    lat1_rad: float, lon1_rad: float, lat2_rad: np.ndarray, lon2_rad: np.ndarray
-) -> np.ndarray:
+    lat1_rad: float,
+    lon1_rad: float,
+    lat2_rad: NDArray[np.float64],
+    lon2_rad: NDArray[np.float64],
+) -> NDArray[np.float64]:
     dlat = lat2_rad - lat1_rad
     dlon = lon2_rad - lon1_rad
     a = (
         np.sin(dlat / 2.0) ** 2
         + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(dlon / 2.0) ** 2
     )
-    c: np.ndarray = 2.0 * np.arcsin(np.sqrt(a))
-    return cast(np.ndarray, 6371.0088 * c)  # mean Earth radius (km)
+    c: NDArray[np.float64] = 2.0 * np.arcsin(np.sqrt(a))
+    return cast(NDArray[np.float64], 6371.0088 * c)  # mean Earth radius (km)
 
 
 def _looks_like_code(q: str) -> tuple[Optional[str], Optional[str]]:
