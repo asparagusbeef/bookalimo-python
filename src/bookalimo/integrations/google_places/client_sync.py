@@ -209,6 +209,7 @@ class GooglePlaces:
         max_distance_km: Optional[float] = 100,
         max_results: Optional[int] = 5,
         confidence_threshold: Optional[float] = 0.5,
+        text_weight: float = 0.5,
     ) -> list[models.ResolvedAirport]:
         """
         Resolve airport candidates given either a natural language text query, a place_id, or a list of Places.
@@ -220,6 +221,7 @@ class GooglePlaces:
             max_distance_km: Maximum distance for proximity matching (default: 100km)
             max_results: Maximum number of results to return (default: 5)
             confidence_threshold: Minimum confidence threshold (default: 0.5)
+            text_weight: Weight for text search (default: 0.5) If 0.0, only proximity will be used. If 1.0, only text will be used.
 
         Rules:
         - Provide at most one of {place_id, places}. (query may accompany either.)
@@ -283,4 +285,5 @@ class GooglePlaces:
             max_distance_km,
             max_results,
             confidence_threshold,
+            text_weight,
         )

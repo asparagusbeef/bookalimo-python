@@ -152,6 +152,7 @@ Resolve airport candidates from text queries, place IDs, or existing Place objec
 - `max_distance_km`: Maximum distance for proximity matching (default: 100km)
 - `max_results`: Maximum number of results to return (default: 5)
 - `confidence_threshold`: Minimum confidence threshold (default: 1.0)
+- `text_weight`: Weight for text search (default: 0.5) If 0.0, only proximity will be used. If 1.0, only text will be used.
 
 **Rules:**
 - Provide at most one of `{place_id, places}` - `query` may accompany either

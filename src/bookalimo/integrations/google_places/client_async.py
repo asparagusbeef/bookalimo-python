@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from os import getenv
 from types import TracebackType
 from typing import Any, Optional, TypeVar, cast
@@ -211,10 +210,20 @@ class AsyncGooglePlaces:
         places: Optional[list[models.Place]] = None,
         max_distance_km: Optional[float] = 100,
         max_results: Optional[int] = 5,
-        confidence_threshold: Optional[float] = 1,
+        confidence_threshold: Optional[float] = 0.5,
+        text_weight: float = 0.5,
     ) -> list[models.ResolvedAirport]:
         """
         Resolve airport candidates given either a natural language text query, a place_id, or a list of Places.
+
+        Args:
+            query: Text query for airport search (optional)
+            place_id: Google place ID for proximity matching (optional)
+            places: List of existing Place objects for proximity matching (optional)
+            max_distance_km: Maximum distance for proximity matching (default: 100km)
+            max_results: Maximum number of results to return (default: 5)
+            confidence_threshold: Minimum confidence threshold (default: 0.5)
+            text_weight: Weight for text search (default: 0.5) If 0.0, only proximity will be used. If 1.0, only text will be used.
 
         Rules:
         - Provide at most one of {place_id, places}. (query may accompany either.)
@@ -272,12 +281,11 @@ class AsyncGooglePlaces:
             p.google_place for p in effective_places if p.google_place is not None
         ]
 
-        # Use asyncio.to_thread for CPU-bound work
-        return await asyncio.to_thread(
-            resolve_airport,
+        return resolve_airport(
             effective_query,
             google_places,
             max_distance_km,
             max_results,
             confidence_threshold,
+            text_weight,
         )

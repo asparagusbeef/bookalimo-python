@@ -45,6 +45,7 @@ airports = await client.places.resolve_airport(
     max_distance_km=50,
     max_results=3,
     confidence_threshold=0.8
+    text_weight=0.9
 )
 
 for airport in airports:

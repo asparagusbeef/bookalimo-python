@@ -21,7 +21,6 @@ CSV_PATH = os.environ.get(
 )
 DEFAULT_MAX_RESULTS = 20  # number of airports to return
 DIST_KM_SCALE = 200.0  # distance scale for proximity confidence
-DEFAULT_TEXT_WEIGHT = 0.5  # weight for text confidence
 
 # Google types that clearly indicate “airport-ish” places
 AIRPORTY_TYPES = {
@@ -260,7 +259,7 @@ def resolve_airport(
     max_distance_km: Optional[float] = 200,
     max_results: Optional[int] = 5,
     confidence_threshold: Optional[float] = 0.5,
-    text_weight: float = DEFAULT_TEXT_WEIGHT,
+    text_weight: float = 0.5,
 ) -> list[ResolvedAirport]:
     """
     Resolve airport candidates given a query and a list of Places responses.
