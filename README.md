@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Python client library for the Book-A-Limo transportation booking API with async/sync support, type safety, Google Places integration, and ergonomic resource management via context managers.
+A modern, fully-typed Python SDK for the Book-A-Limo transportation booking API with async/sync support, type safety, Google Places integration, and ergonomic resource management via context managers.
 
 ## Important notes
 
