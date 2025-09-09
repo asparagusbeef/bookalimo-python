@@ -12,7 +12,7 @@ from typing import Any, Optional, cast
 import numpy as np
 from rapidfuzz import fuzz, process
 
-from bookalimo.schemas.places import Airport, GooglePlace
+from bookalimo.schemas.places import GooglePlace, ResolvedAirport
 
 # ---------- Config ----------
 CSV_PATH = os.environ.get(
@@ -20,7 +20,7 @@ CSV_PATH = os.environ.get(
 )
 DEFAULT_MAX_RESULTS = 20  # number of airports to return
 DIST_KM_SCALE = 200.0  # distance scale for proximity confidence
-DEFAULT_TEXT_WEIGHT = 0.65  # weight for text confidence
+DEFAULT_TEXT_WEIGHT = 0.5  # weight for text confidence
 
 # Google types that clearly indicate “airport-ish” places
 AIRPORTY_TYPES = {
@@ -257,7 +257,7 @@ def resolve_airport(
     max_results: Optional[int] = 5,
     confidence_threshold: Optional[float] = 0.5,
     text_weight: float = DEFAULT_TEXT_WEIGHT,
-) -> list[Airport]:
+) -> list[ResolvedAirport]:
     """
     Resolve airport candidates given a query and a list of Places responses.
     Args:
@@ -367,7 +367,7 @@ def resolve_airport(
     order = np.argsort(-final_masked)
     top = order[: max_results or DEFAULT_MAX_RESULTS]
 
-    results: list[Airport] = []
+    results: list[ResolvedAirport] = []
     for idx in top:
         if final_masked[idx] == -np.inf:
             break
@@ -380,7 +380,7 @@ def resolve_airport(
         ):
             continue
         results.append(
-            Airport(
+            ResolvedAirport(
                 name=r["name"],
                 city=r["city"],
                 iata_code=r["iata"] or None,

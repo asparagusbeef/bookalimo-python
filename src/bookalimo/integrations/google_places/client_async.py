@@ -204,7 +204,7 @@ class AsyncGooglePlaces:
         max_distance_km: Optional[float] = 100,
         max_results: Optional[int] = 5,
         confidence_threshold: Optional[float] = 1,
-    ) -> list[models.Airport]:
+    ) -> list[models.ResolvedAirport]:
         """
         Resolve airport candidates given either a text query, a place_id, or a list of Places.
 
@@ -222,7 +222,7 @@ class AsyncGooglePlaces:
         - If max_distance_km is provided, it must be > 0.
 
         Returns:
-            list[models.Airport]
+            list[models.ResolvedAirport]
         Raises:
             ValueError on invalid inputs.
             BookalimoError if underlying API requests fail.

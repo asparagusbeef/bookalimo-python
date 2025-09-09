@@ -199,11 +199,11 @@ Structured place result from Google Places API searches.
 
 Raw Google Places API response model - Pydantic representation of the google [Place](https://developers.google.com/maps/documentation/places/web-service/reference/rest/v1/places) object.
 
-### Airport
+### ResolvedAirport
 
-::: bookalimo.schemas.places.Airport
+::: bookalimo.schemas.places.ResolvedAirport
 
-Airport result model with confidence scoring from the resolve_airport functionality.
+ResolvedAirport result model with confidence scoring from the resolve_airport functionality.
 
 **Key Fields:**
 - `name`: Airport name

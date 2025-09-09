@@ -78,7 +78,7 @@ customer = Credentials.create("user@email.com", "password", is_customer=True)
 import asyncio
 from bookalimo import AsyncBookalimo
 from bookalimo.transport.auth import Credentials
-from bookalimo.schemas.booking import RateType, Location, LocationType, Address, City
+from bookalimo.schemas.booking import RateType, Location, LocationType, Address, City, Airport
 
 async def book_ride():
     credentials = Credentials.create("your_id", "your_password", is_customer=False)
@@ -92,11 +92,8 @@ async def book_ride():
     )
 
     dropoff = Location(
-        type=LocationType.ADDRESS,
-        address=Address(
-            place_name="JFK Airport",
-            city=City(city_name="New York", country_code="US", state_code="NY")
-        )
+        type=LocationType.AIRPORT,
+        airport=Airport(iata_code="JFK")
     )
 
     async with AsyncBookalimo(credentials=credentials) as client:
@@ -198,7 +195,17 @@ async with AsyncBookalimo(
     google_places_api_key="your-google-places-key"
 ) as client:
     # Search locations
-    results = await client.places.search("JFK Airport Terminal 4")
+    results = await client.places.search("Hilton Miami Beach")
+
+    # OR
+    # autocomplete = await client.places.autocomplete(input="Hilton Miami Beach")
+    # top_result = autocomplete.suggestions[0].place_prediction.place
+    # top_result_place_id = top_result.id
+
+    # OR
+    # resolve_airport = await client.places.resolve_airport(query="Hilton Miami Beach")
+    # top_result = resolve_airport[0]
+    # iata_code = top_result.iata_code
 
     # Get the top result
     top_result = results[0]
@@ -284,16 +291,8 @@ except BookalimoError as e:
 ## Environment
 
 ```bash
-# Google Places
 export GOOGLE_PLACES_API_KEY="your_google_places_key"
-
-# SDK logging
 export BOOKALIMO_LOG_LEVEL="DEBUG"
-
-# (Optional) Provide credentials via env vars if your app loads them:
-export BOOKALIMO_USER_ID="your_agency_id_or_email"
-export BOOKALIMO_PASSWORD="your_password"
-export BOOKALIMO_IS_CUSTOMER="false"  # "true" for end-customer accounts
 ```
 
 ## Requirements
@@ -301,7 +300,7 @@ export BOOKALIMO_IS_CUSTOMER="false"  # "true" for end-customer accounts
 * Python 3.9+
 * Book-A-Limo API credentials
 * Dependencies: httpx, pydantic, pycountry, us, airportsdata
-* Optional: google-maps-places (for Places integration)
+  - Optional: google-maps-places, google-api-core, numpy, rapidfuzz
 
 ## Support & Resources
 

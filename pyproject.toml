@@ -35,7 +35,6 @@ dependencies = [
     "pycountry>=22.0.0",
     "us>=3.0.0",
     "airportsdata>=20230101",
-    "StrEnum>=0.4.0; python_version < '3.11'",
 ]
 requires-python = ">=3.9"
 

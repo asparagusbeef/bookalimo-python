@@ -880,8 +880,8 @@ class SearchTextResponse(BaseModel):
     )
 
 
-class Airport(BaseModel):
-    """Airport result from the Google Places API."""
+class ResolvedAirport(BaseModel):
+    """Airport result from the resolve_airport() method."""
 
     name: str = Field(..., description="Name of the airport")
     city: str = Field(..., description="City of the airport")

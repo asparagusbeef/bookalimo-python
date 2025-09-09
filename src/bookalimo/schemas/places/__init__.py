@@ -2,7 +2,6 @@
 
 from .common import AddressDescriptor
 from .google import (
-    Airport,
     AutocompletePlacesRequest,
     AutocompletePlacesResponse,
     Circle,
@@ -17,6 +16,7 @@ from .google import (
     PlaceType,
     QueryPrediction,
     RankPreference,
+    ResolvedAirport,
     SearchTextRequest,
     StringRange,
     StructuredFormat,
@@ -44,7 +44,7 @@ __all__ = [
     "AutocompletePlacesRequest",
     "GeocodingRequest",
     "SearchTextRequest",
-    "Airport",
+    "ResolvedAirport",
     "AddressDescriptor",
     "AddressComponent",
 ]
