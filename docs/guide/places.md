@@ -140,13 +140,13 @@ The `resolve_airport()` method provides intelligent airport matching:
 ```python
 # Find airports by text
 airports = await client.places.resolve_airport(
-    query="kennedy airport new york"
+    query="kennedy airport new york",
 )
 
 # Or resolve from existing place
 place_result = await client.places.search("Eiffel Tower")
 airports = await client.places.resolve_airport(
-    place_id=place_result[0].google_place.id
+    places=[place_result[0]],
 )
 
 # Results include confidence scores
