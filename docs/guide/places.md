@@ -197,8 +197,8 @@ airports = await client.places.resolve_airport(
 # API cost optimization (use existing Place objects)
 eiffel_places = await client.places.search("Eiffel Tower")
 airports = await client.places.resolve_airport(
-    places=eiffel_places,
-    text_weight=0.0,  # Skip additional API call
+    places=eiffel_places,  # Skip additional API call
+    text_weight=0.0,
 )
 ```
 
