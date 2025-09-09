@@ -19,6 +19,7 @@ from .google import (
     QueryPrediction,
     RankPreference,
     ResolvedAirport,
+    RoutingParameters,
     SearchTextLocationRestriction,
     SearchTextRequest,
     StringRange,
@@ -55,4 +56,5 @@ __all__ = [
     "FieldPath",
     "compile_field_mask",
     "EVOptions",
+    "RoutingParameters",
 ]
