@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Google Places**: `autocomplete()` now accepts either a string input or a `AutocompletePlacesRequest` object
 - **Google Places**: New `resolve_airport()` method for advanced airport resolution with confidence scoring
 - **Google Places**: Support for `SearchTextRequest` objects in `search()` method for advanced filtering
-- **Schemas**: New `Airport` model with text and proximity confidence scores
+- **Schemas**: New `ResolvedAirport` model with text and proximity confidence scores
 - **Schemas**: New `RankPreference` enum for search result ranking (`DISTANCE`, `RELEVANCE`)
 - **Schemas**: New `SearchTextRequest` model with comprehensive search parameters
 - **Schemas**: New `SearchTextResponse` model for text search API responses
