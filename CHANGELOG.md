@@ -48,13 +48,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resource-style API: `client.reservations.list()`, `client.pricing.quote()`, etc.
 - Comprehensive retry logic with exponential backoff and jitter
 - Optional Google Places integration behind `[places]` extra
-- Clean import structure with minimal `__init__` exports
+- `BookalimoValidationError` for aggregated, field-level validation errors.
+- Logging improvements and `get_logger()` export; optional `http_timeout` on `Bookalimo`.
 
 ### Removed
 - Old `BookALimo` wrapper class (replaced with `AsyncBookalimo` and `Bookalimo`)
 - Factory helper methods (`create_address_location`, etc.) - use models directly
 - Authenticated model duplicates (simplified credential injection)
-- `enable_debug_logging`/`disable_debug_logging` functions
+- `enable_debug_logging`/`disable_debug_logging` functions -> use `BOOKALIMO_LOG_LEVEL` environment variable
+
+## [0.1.5] - 2025-09-04
+
+### Fixed
+- Fix type hints for logging decorator
+
+## [0.1.4] - 2025-09-02
+
+### Added
+- logging handling + documentation
+
+### Fixed
+- Fix typo in base_url
+
+## [0.1.3] - 2025-09-02
+
+### Changed
+- Moved `BookalimoError` to a separate `exceptions.py` module.
+- Updated README.md.
+
+## [0.1.2] - 2025-09-02
+
+### Fixed
+- Minor fixes
+
+## [0.1.1] - 2025-09-02
+
+### Fixed
+- Minor fixes
 
 ## [0.1.0] - 2024-09-02
 
@@ -66,55 +96,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete type hints
 - Error handling and custom exceptions
 - Documentation with MkDocs
-
-## [0.1.1] - 2025-09-02
-
-### Fixed
-- Minor fixes
-
-## [0.1.2] - 2025-09-02
-
-### Fixed
-- Minor fixes
-
-## [0.1.3] - 2025-09-02
-
-### Changed
-- Moved `BookalimoError` to a separate `exceptions.py` module.
-- Updated README.md.
-
-## [0.1.4] - 2025-09-02
-
-### Added
-- logging handling + documentation
-
-### Fixed
-- Fix typo in base_url
-
-## [0.1.5] - 2025-09-04
-
-### Fixed
-- Fix type hints for logging decorator
-
-## [1.0.0] - 2025-09-05
-
-### Added
-- Google Places integration: `GooglePlacesClient`, `Place`, `PlaceType`, `create_location_from_places`, `autocomplete_locations`.
-- `BookalimoValidationError` for aggregated, field-level validation errors.
-- Logging improvements and `get_logger()` export; optional `http_timeout` on `Bookalimo`.
-- Dev tooling updates: add `build`, `twine`, `python-dotenv`.
-
-### Changed
-- BREAKING: `create_address_location(...)` now requires **either** `google_geocode` **or** (`country_code` + `city_name` [+ `state_code` if US]) **and** **either** `place_name` **or** `street_name`.
-- BREAKING: `create_airport_location(...)` drops `city_name`; accepts optional `country_code`, `state_code`, airline codes, flight/terminal; stricter IATA validation.
-- BREAKING: `create_credit_card(...)` makes `holder_type` optional and moves it after `cvv`.
-- Refine model validators; update README to match new APIs.
-
-### Removed
-- MkDocs-related dev dependencies.
-- Legacy single-string address builder examples.
-- Internal ICAO dataset dependency (retain IATA validation).
-
-### Fixed
-- Aggregate multiple address validation errors; clearer country/state checks.
-- Minor typing and test stability improvements.
