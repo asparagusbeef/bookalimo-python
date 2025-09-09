@@ -25,6 +25,7 @@ from .common import (
     mask_header,
     normalize_place_from_proto,
     normalize_search_results,
+    validate_autocomplete_inputs,
     validate_resolve_airport_inputs,
 )
 from .proto_adapter import validate_proto_to_model
@@ -82,21 +83,28 @@ class AsyncGooglePlaces:
             await self.http_client.aclose()
 
     async def autocomplete(
-        self, request: models.AutocompletePlacesRequest, **kwargs: Any
+        self,
+        input: Optional[str] = None,
+        *,
+        request: Optional[models.AutocompletePlacesRequest] = None,
     ) -> models.AutocompletePlacesResponse:
         """
         Get autocomplete suggestions for a location query.
         Args:
+            input: The text string on which to search.
             request: AutocompletePlacesRequest object.
-            **kwargs: Additional parameters for the Google Places Autocomplete API.
         Returns:
             `AutocompletePlacesResponse` object.
+        Note:
+            If both input and request are provided, request will be used.
         Raises:
+            ValueError: If neither input nor request is provided, or if both are provided.
             BookalimoError: If the API request fails.
         """
+        request = validate_autocomplete_inputs(input, request)
         try:
             proto = await self.transport.autocomplete_places(
-                request=request.model_dump(), **kwargs
+                request=request.model_dump()
             )
             return validate_proto_to_model(proto, models.AutocompletePlacesResponse)
         except gexc.GoogleAPICallError as e:
@@ -206,7 +214,7 @@ class AsyncGooglePlaces:
         confidence_threshold: Optional[float] = 1,
     ) -> list[models.ResolvedAirport]:
         """
-        Resolve airport candidates given either a text query, a place_id, or a list of Places.
+        Resolve airport candidates given either a natural language text query, a place_id, or a list of Places.
 
         Rules:
         - Provide at most one of {place_id, places}. (query may accompany either.)

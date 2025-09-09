@@ -404,3 +404,16 @@ def validate_resolve_airport_inputs(
         raise ValueError("Provide only one of place_id or places, not both.")
     if max_distance_km is not None and max_distance_km <= 0:
         raise ValueError("max_distance_km, if provided, must be > 0.")
+
+
+def validate_autocomplete_inputs(
+    input: Optional[str],
+    request: Optional[models.AutocompletePlacesRequest],
+) -> models.AutocompletePlacesRequest:
+    """Validate inputs for autocomplete method."""
+    if request is None:
+        if input is None:
+            raise ValueError("Either input or request must be provided.")
+        else:
+            request = models.AutocompletePlacesRequest(input=input)
+    return request

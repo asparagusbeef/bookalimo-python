@@ -76,9 +76,12 @@ async with AsyncGooglePlaces(api_key="your-key") as places:
 Get autocomplete suggestions for location queries.
 
 **Parameters:**
-- `request`: `AutocompletePlacesRequest` object with search parameters
+- `input`: The text string on which to search (optional)
+- `request`: `AutocompletePlacesRequest` object with search parameters (optional)
 
 **Returns:** `AutocompletePlacesResponse` with place suggestions
+
+**Note:** Either `input` or `request` must be provided. If both are provided, `request` will be used.
 
 **Example:**
 ```python
@@ -288,13 +291,15 @@ from bookalimo.schemas.booking import Location, LocationType, Address, Airport
 
 def create_location_from_place(place):
     """Convert Google Places result to Bookalimo Location."""
+    geocode = await client.places.geocode(place.google_place.id)
     if place.place_type == "airport":
-        # For airports, you should use resolve_airport() method for better IATA code detection
-        # This is a fallback for when you have a Place that you know is an airport
+        # For airports, you should use resolve_airport() and provide the IATA code to the Airport model.
+        airports = await client.places.resolve_airport(place_id=place.google_place.id)
         return Location(
-            type=LocationType.ADDRESS,  # Use ADDRESS type as fallback
-            address=Address(
-                google_geocode=place.google_place.model_dump(),
+            type=LocationType.AIRPORT,
+            address=Airport(
+                iata_code=airports[0].iata_code,
+                google_geocode=geocode,
                 place_name=place.google_place.display_name.text if place.google_place.display_name else place.formatted_address
             )
         )
@@ -302,7 +307,7 @@ def create_location_from_place(place):
         return Location(
             type=LocationType.ADDRESS,
             address=Address(
-                google_geocode=place.google_place.model_dump(),
+                google_geocode=geocode,
                 place_name=place.google_place.display_name.text if place.google_place.display_name else place.formatted_address
             )
         )

@@ -218,7 +218,7 @@ class TestGooglePlacesSync:
             mock_transport.return_value = mock_proto_response
             mock_validate.return_value = expected_response
 
-            result = places_client.autocomplete(request)
+            result = places_client.autocomplete(request=request)
 
             assert result == expected_response
             mock_transport.assert_called_once_with(request=request.model_dump())
@@ -237,7 +237,7 @@ class TestGooglePlacesSync:
         )
 
         with pytest.raises(BookalimoError, match="Google Places Autocomplete failed"):
-            places_client.autocomplete(request)
+            places_client.autocomplete(request=request)
 
     def test_search_success(self, places_client):
         """Test successful text search."""
@@ -494,7 +494,7 @@ class TestGooglePlacesAsync:
             mock_transport.return_value = mock_proto_response
             mock_validate.return_value = expected_response
 
-            result = await places_client.autocomplete(request)
+            result = await places_client.autocomplete(request=request)
 
             assert result == expected_response
             mock_transport.assert_called_once_with(request=request.model_dump())
@@ -744,7 +744,7 @@ class TestGooglePlacesErrorHandling:
         )
 
         with pytest.raises(BookalimoError, match="Google Places Autocomplete failed"):
-            places_client.autocomplete(request)
+            places_client.autocomplete(request=request)
 
     @pytest.mark.skipif(
         not PLACES_AVAILABLE, reason="Google Places integration not available"
