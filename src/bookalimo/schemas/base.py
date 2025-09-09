@@ -7,8 +7,21 @@ from enum import Enum
 from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, model_serializer
-from pydantic.alias_generators import to_camel
+from pydantic.alias_generators import to_camel, to_snake
 from pydantic_core.core_schema import SerializationInfo, SerializerFunctionWrapHandler
+
+
+def _deep_to_snake(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {
+            (to_snake(k) if isinstance(k, str) else k): _deep_to_snake(v)
+            for k, v in obj.items()
+        }
+    if isinstance(obj, list):
+        return [_deep_to_snake(v) for v in obj]
+    if isinstance(obj, tuple):
+        return type(obj)(_deep_to_snake(v) for v in obj)
+    return obj
 
 
 class ApiModel(BaseModel):
@@ -17,6 +30,11 @@ class ApiModel(BaseModel):
 
     Provides automatic field name conversion between Python snake_case
     and API camelCase, plus proper enum handling.
+
+    Serialization options (via `model_dump(..., context=...)`):
+      - context["enum_out"]: "value" (default) or "name"
+      - context["case"]: "camel" (default) or "snake"
+      - context["snake_case"]: True/False (alias for case="snake"/"camel")
     """
 
     model_config = ConfigDict(
@@ -41,16 +59,30 @@ class ApiModel(BaseModel):
         data = handler(self)
 
         # Decide how to emit enums based on context (default to 'value')
-        enum_out = (info.context or {}).get("enum_out", "value")
+        ctx = info.context or {}
+        enum_out = ctx.get("enum_out", "value")
 
-        def convert(obj: Any) -> Any:
+        def convert_values(obj: Any) -> Any:
             if isinstance(obj, Enum):
                 return obj.name if enum_out == "name" else obj.value
             if isinstance(obj, dict):
-                return {k: convert(v) for k, v in obj.items()}
+                return {k: convert_values(v) for k, v in obj.items()}
             if isinstance(obj, (list, tuple)):
                 t = type(obj)
-                return t(convert(v) for v in obj)
+                return t(convert_values(v) for v in obj)
             return obj
 
-        return cast(dict[str, Any], convert(data))
+        out = cast(dict[str, Any], convert_values(data))
+
+        # Key case control: default "camel" (uses aliases); allow "snake" via context.
+        case = ctx.get("case")
+        # Support boolean alias for convenience: snake_case=True -> case="snake"
+        if ctx.get("snake_case") is True:
+            case = "snake"
+        elif ctx.get("snake_case") is False:
+            case = "camel"
+
+        if case == "snake":
+            out = cast(dict[str, Any], _deep_to_snake(out))
+
+        return out

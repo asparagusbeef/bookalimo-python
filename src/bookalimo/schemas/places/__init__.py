@@ -27,7 +27,7 @@ from .google import (
     StructuredFormat,
     Suggestion,
 )
-from .place import AddressComponent, GooglePlace
+from .place import AddressComponent, BusinessStatus, GooglePlace, PriceLevel
 
 __all__ = [
     "PlaceType",
@@ -59,4 +59,6 @@ __all__ = [
     "EVOptions",
     "RoutingParameters",
     "SearchTextResponse",
+    "PriceLevel",
+    "BusinessStatus",
 ]

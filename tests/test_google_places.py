@@ -18,8 +18,8 @@ try:
     from bookalimo.integrations.google_places.client_sync import GooglePlaces
     from bookalimo.integrations.google_places.common import (
         DEFAULT_PLACE_FIELDS,
-        fmt_exc,
-        mask_header,
+        _fmt_exc,
+        _mask_header,
     )
     from bookalimo.schemas.places import google as models
     from bookalimo.schemas.places.common import LatLng
@@ -37,8 +37,8 @@ except ImportError:
         from bookalimo.integrations.google_places.client_sync import GooglePlaces
         from bookalimo.integrations.google_places.common import (
             DEFAULT_PLACE_FIELDS,
-            fmt_exc,
-            mask_header,
+            _fmt_exc,
+            _mask_header,
         )
         from bookalimo.schemas.places import google as models
         from bookalimo.schemas.places.common import LatLng
@@ -49,8 +49,8 @@ except ImportError:
         AsyncGooglePlaces = None
         GooglePlaces = None
         DEFAULT_PLACE_FIELDS = None
-        fmt_exc = None
-        mask_header = None
+        _fmt_exc = None
+        _mask_header = None
         models = None
         LatLng = None
         GooglePlace = None
@@ -72,7 +72,7 @@ class TestGooglePlacesCommon:
     def test_mask_header_with_list(self):
         """Test mask header creation with list of fields."""
         fields = ["id", "displayName", "formattedAddress"]
-        result = mask_header(fields)
+        result = _mask_header(fields)
 
         assert len(result) == 1
         assert result[0][0] == "x-goog-fieldmask"
@@ -81,7 +81,7 @@ class TestGooglePlacesCommon:
     def test_mask_header_with_string(self):
         """Test mask header creation with comma-separated string."""
         fields = "id,displayName,formattedAddress"
-        result = mask_header(fields)
+        result = _mask_header(fields)
 
         assert len(result) == 1
         assert result[0][0] == "x-goog-fieldmask"
@@ -90,7 +90,7 @@ class TestGooglePlacesCommon:
     def test_fmt_exc_with_google_exception(self):
         """Test exception formatting with Google API exception."""
         exc = gexc.InvalidArgument("Invalid field mask")
-        result = fmt_exc(exc)
+        result = _fmt_exc(exc)
 
         assert "Invalid field mask" in result
         assert isinstance(result, str)
@@ -98,7 +98,7 @@ class TestGooglePlacesCommon:
     def test_fmt_exc_with_regular_exception(self):
         """Test exception formatting with regular exception."""
         exc = ValueError("Regular error")
-        result = fmt_exc(exc)
+        result = _fmt_exc(exc)
 
         assert "Regular error" in result
         assert isinstance(result, str)

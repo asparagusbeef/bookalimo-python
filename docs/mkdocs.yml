@@ -1,88 +1,29 @@
 site_name: Bookalimo Python SDK
-site_url: https://asparagusbeef.github.io/bookalimo-python
-site_description: Python client library for the Book-A-Limo transportation booking API
-docs_dir: .
-site_dir: ../site
 repo_name: asparagusbeef/bookalimo-python
 repo_url: https://github.com/asparagusbeef/bookalimo-python
+docs_dir: .
+site_dir: ../site
 
 nav:
-  - Home: README.md
+  - Home: index.md
   - User Guide:
-    - Quick Start: guide/quickstart.md
+    - Quickstart: guide/quickstart.md
     - Authentication: guide/auth.md
-    - Making Bookings: guide/bookings.md
-    - Google Places Integration: guide/places.md
+    - Bookings: guide/bookings.md
+    - Google Places: guide/places.md
+    - Advanced: guide/advanced.md
     - Error Handling: guide/errors.md
   - API Reference:
     - Overview: api/index.md
+    - Clients: api/clients.md
+    - Services:
+      - Pricing: api/services/pricing.md
+      - Reservations: api/services/reservations.md
     - Schemas:
       - Base Models: api/schemas/base.md
-      - Booking Models: api/schemas/booking.md
-      - Places Models: api/schemas/places.md
-    - Clients:
-      - Main Clients: api/clients.md
-      - Configuration: api/config.md
-    - Services:
-      - Pricing Service: api/services/pricing.md
-      - Reservations Service: api/services/reservations.md
-    - Transport:
-      - Transport Layer: api/transport/index.md
-      - Authentication: api/transport/auth.md
-      - HTTP Clients: api/transport/http.md
-    - Integrations:
-      - Google Places: api/integrations/places.md
+      - Booking: api/schemas/booking.md
+      - Places: api/schemas/places.md
     - Exceptions: api/exceptions.md
-  - Examples:
-    - Basic Usage: examples/basic.md
-    - Async Usage: examples/async.md
-    - Google Places: examples/places.md
-  - Contributing: ./CONTRIBUTING.md
-  - Changelog: ./CHANGELOG.md
-  - Code of Conduct: ./CODE_OF_CONDUCT.md
-  - License: ./LICENSE
 
 theme:
   name: material
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: blue
-      accent: blue
-      toggle:
-        icon: material/weather-night
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: blue
-      accent: blue
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to light mode
-  features:
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.highlight
-    - content.code.annotate
-
-plugins:
-  - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [src]
-          options:
-            docstring_style: google
-            show_root_heading: true
-            show_source: false
-
-markdown_extensions:
-  - admonition
-  - codehilite
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-  - toc:
-      permalink: true

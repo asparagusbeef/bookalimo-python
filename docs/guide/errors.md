@@ -1,30 +1,39 @@
 # Error Handling
 
-Comprehensive error handling patterns for robust applications.
+The SDK provides specific exception types for different error scenarios.
 
 ## Exception Hierarchy
 
-```python
-from bookalimo.exceptions import (
-    BookalimoError,           # Base exception
-    BookalimoValidationError, # Input validation errors
-    BookalimoHTTPError,       # API/HTTP errors  
-    BookalimoTimeout,         # Request timeouts
-    BookalimoConnectionError  # Network connectivity
-)
+```
+BookalimoError (base)
+├── BookalimoValidationError (input validation)
+├── BookalimoRequestError (general request issues)
+├── BookalimoConnectionError (network connectivity)
+└── BookalimoHTTPError (HTTP status errors)
+    └── BookalimoTimeout (408 timeouts)
 ```
 
 ## Basic Error Handling
 
 ```python
+from bookalimo.exceptions import (
+    BookalimoValidationError,
+    BookalimoHTTPError,
+    BookalimoTimeout,
+    BookalimoConnectionError,
+    BookalimoError,
+)
+
 try:
-    async with AsyncBookalimo(credentials=credentials) as client:
+    async with AsyncBookalimo(credentials=creds) as client:
         quote = await client.pricing.quote(...)
         booking = await client.reservations.book(token=quote.token, ...)
-        
+
 except BookalimoValidationError as e:
     print(f"Invalid input: {e.message}")
-    
+    for error in e.errors():
+        print(f"  {error['loc']}: {error['msg']}")
+
 except BookalimoHTTPError as e:
     if e.status_code == 401:
         print("Authentication failed")
@@ -32,46 +41,40 @@ except BookalimoHTTPError as e:
         print(f"Bad request: {e.payload}")
     else:
         print(f"API error {e.status_code}: {e}")
-        
+
 except BookalimoTimeout:
-    print("Request timed out - retry with backoff")
-    
+    print("Request timed out")
+
 except BookalimoConnectionError:
     print("Network connectivity issue")
-    
+
 except BookalimoError as e:
     print(f"SDK error: {e}")
 ```
 
-## Retry Pattern
+## Common Scenarios
 
-```python
-import asyncio
-
-async def retry_with_backoff(func, max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            return await func()
-        except (BookalimoTimeout, BookalimoConnectionError) as e:
-            if attempt == max_retries - 1:
-                raise
-            await asyncio.sleep(2 ** attempt)  # Exponential backoff
-```
-
-## Validation Error Details
-
+**Invalid Location Data**:
 ```python
 try:
-    quote = await client.pricing.quote(invalid_params)
+    location = Location(type=LocationType.ADDRESS)  # Missing address
 except BookalimoValidationError as e:
-    print(f"Validation failed: {e.message}")
-    for error in e.errors():
-        print(f"  {error['loc']}: {error['msg']}")
+    print(f"Location validation failed: {e.message}")
 ```
 
-## Debug Logging
-
+**Authentication Issues**:
 ```python
-import logging
-logging.getLogger("bookalimo.transport").setLevel(logging.DEBUG)
+try:
+    quote = await client.pricing.quote(...)
+except BookalimoHTTPError as e:
+    if e.status_code == 401:
+        print("Check your credentials")
 ```
+
+**Session Token Expired**:
+```python
+try:
+    booking = await client.reservations.book(token="expired_token", ...)
+except BookalimoHTTPError as e:
+    if e.status_code == 400 and "token" in str(e).lower():
+        print("Session expired - get new quote")

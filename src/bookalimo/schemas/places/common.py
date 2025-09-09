@@ -48,7 +48,7 @@ class LocalizedText(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     text: str
-    language_code: str
+    language_code: Optional[str] = None
 
     @field_validator("language_code")
     @classmethod

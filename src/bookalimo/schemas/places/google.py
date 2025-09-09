@@ -126,8 +126,8 @@ class StructuredFormat(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    main_text: FormattableText
-    secondary_text: FormattableText
+    main_text: Optional[FormattableText] = None
+    secondary_text: Optional[FormattableText] = None
 
 
 # ---------- Geometry Primitives ----------
@@ -651,37 +651,173 @@ class AutocompletePlacesRequest(BaseModel):
         return self
 
 
+class ExtraComputations(StrEnum):
+    """Extra computations for Geocoding API requests."""
+
+    ADDRESS_DESCRIPTORS = "ADDRESS_DESCRIPTORS"
+    BUILDING_AND_ENTRANCES = "BUILDING_AND_ENTRANCES"
+
+
 class GeocodingRequest(BaseModel):
     """
     Pydantic model for validating and building Geocoding API query parameters.
+    Supports both forward geocoding (address -> coordinates) and reverse geocoding (coordinates -> address).
     This model is not for a JSON request body, but for constructing a URL.
     """
 
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    # Forward geocoding parameters
     address: Optional[str] = Field(
         default=None,
         description="The street address or plus code that you want to geocode.",
+    )
+    components: Optional[str] = Field(
+        default=None,
+        description="Components filter with pipe-separated component:value pairs (e.g., 'country:US|locality:Mountain View').",
+    )
+
+    # Reverse geocoding parameters
+    latlng: Optional[str] = Field(
+        default=None,
+        description="Latitude and longitude coordinates for reverse geocoding (e.g., '40.714224,-73.961452').",
     )
     place_id: Optional[str] = Field(
         default=None,
         description="The place ID of the place for which you wish to obtain the human-readable address.",
     )
+
+    # Optional parameters for both forward and reverse geocoding
     language: Optional[str] = Field(
-        default=None, description="The language in which to return results."
+        default=None, description="The language in which to return results (BCP-47)."
     )
     region: Optional[str] = Field(
         default=None, description="The region code (ccTLD) to bias results."
     )
+    extra_computations: list[ExtraComputations] = Field(
+        default_factory=list,
+        description="Additional features to include in the response.",
+    )
+
+    # Forward geocoding specific optional parameters
+    bounds: Optional[str] = Field(
+        default=None,
+        description="Bounding box for viewport biasing (format: 'southwest_lat,southwest_lng|northeast_lat,northeast_lng').",
+    )
+
+    # Reverse geocoding specific optional parameters
+    result_type: Optional[str] = Field(
+        default=None,
+        description="Filter for address types, pipe-separated (e.g., 'street_address|route').",
+    )
+    location_type: Optional[str] = Field(
+        default=None,
+        description="Filter for location types, pipe-separated (e.g., 'ROOFTOP|RANGE_INTERPOLATED').",
+    )
+
+    @field_validator("latlng")
+    @classmethod
+    def _validate_latlng(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        try:
+            parts = v.split(",")
+            if len(parts) != 2:
+                raise ValueError("latlng must be in format 'latitude,longitude'")
+            lat, lng = float(parts[0]), float(parts[1])
+            if not (-90 <= lat <= 90):
+                raise ValueError("Latitude must be between -90 and 90")
+            if not (-180 <= lng <= 180):
+                raise ValueError("Longitude must be between -180 and 180")
+        except (ValueError, IndexError) as e:
+            if "could not convert" in str(e):
+                raise ValueError("latlng coordinates must be valid numbers") from None
+            raise
+        return v
+
+    @field_validator("bounds")
+    @classmethod
+    def _validate_bounds(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        try:
+            parts = v.split("|")
+            if len(parts) != 2:
+                raise ValueError(
+                    "bounds must be in format 'sw_lat,sw_lng|ne_lat,ne_lng'"
+                )
+            for part in parts:
+                coords = part.split(",")
+                if len(coords) != 2:
+                    raise ValueError("Each bounds coordinate pair must be 'lat,lng'")
+                lat, lng = float(coords[0]), float(coords[1])
+                if not (-90 <= lat <= 90):
+                    raise ValueError("Latitude must be between -90 and 90")
+                if not (-180 <= lng <= 180):
+                    raise ValueError("Longitude must be between -180 and 180")
+        except (ValueError, IndexError) as e:
+            if "could not convert" in str(e):
+                raise ValueError("bounds coordinates must be valid numbers") from None
+            raise
+        return v
+
+    @field_validator("language")
+    @classmethod
+    def _validate_language_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not BCP47.match(v):
+            raise ValueError(
+                "language must be a valid BCP-47 tag (e.g., 'en', 'en-US', 'zh-Hant')."
+            )
+        return v
+
+    @field_validator("region")
+    @classmethod
+    def _validate_region_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v2 = v.upper()
+        if not CLDR_REGION_2.fullmatch(v2):
+            raise ValueError(
+                "region must be a two-letter ccTLD region code (e.g., 'US', 'GB')."
+            )
+        return v2
+
+    @field_validator("extra_computations")
+    @classmethod
+    def _validate_extra_computations(
+        cls, v: list[ExtraComputations]
+    ) -> list[ExtraComputations]:
+        # Remove duplicates while preserving order
+        seen = set()
+        cleaned = []
+        for computation in v:
+            if computation not in seen:
+                cleaned.append(computation)
+                seen.add(computation)
+        return cleaned
 
     @model_validator(mode="before")
     @classmethod
     def check_required_params(cls, data: Any) -> Any:
-        """Ensures that either 'address', 'place_id', or 'components' is provided."""
+        """Validates that proper parameters are provided for forward or reverse geocoding."""
         if isinstance(data, dict):
-            if not any(
-                [data.get("address"), data.get("place_id"), data.get("components")]
-            ):
+            has_forward = any([data.get("address"), data.get("components")])
+            has_reverse = data.get("latlng") is not None
+            has_place_id = data.get("place_id") is not None
+
+            if not (has_forward or has_reverse or has_place_id):
                 raise ValueError(
-                    "You must specify either 'address', 'place_id', or 'components'."
+                    "For forward geocoding: specify 'address' and/or 'components'. "
+                    "For reverse geocoding: specify 'latlng'. "
+                    "For place ID lookup: specify 'place_id'."
+                )
+
+            # Can't mix forward and reverse geocoding parameters
+            if has_reverse and (has_forward or has_place_id):
+                raise ValueError(
+                    "Cannot mix reverse geocoding (latlng) with forward geocoding (address/components) or place_id lookup."
                 )
         return data
 
@@ -690,17 +826,36 @@ class GeocodingRequest(BaseModel):
         Serializes the model fields into a dictionary suitable for URL query parameters.
         """
         params = QueryParams()
+
+        # Forward geocoding parameters
         if self.address:
             params = params.add("address", self.address)
+        if self.components:
+            params = params.add("components", self.components)
+        if self.bounds:
+            params = params.add("bounds", self.bounds)
 
+        # Reverse geocoding parameters
+        if self.latlng:
+            params = params.add("latlng", self.latlng)
+        if self.result_type:
+            params = params.add("result_type", self.result_type)
+        if self.location_type:
+            params = params.add("location_type", self.location_type)
+
+        # Place ID lookup
         if self.place_id:
             params = params.add("place_id", self.place_id)
 
+        # Common optional parameters
         if self.language:
             params = params.add("language", self.language)
-
         if self.region:
             params = params.add("region", self.region)
+
+        # Extra computations (can appear multiple times)
+        for computation in self.extra_computations:
+            params = params.add("extra_computations", computation.value)
 
         return params
 

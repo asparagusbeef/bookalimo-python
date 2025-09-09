@@ -4,10 +4,21 @@ Transport abstractions for Google Places clients.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, Type, TypeVar
 
 from google.api_core.client_options import ClientOptions
 from google.maps.places_v1 import PlacesAsyncClient, PlacesClient
+
+T = TypeVar("T", PlacesClient, PlacesAsyncClient)
+
+
+def _get_places_client(
+    api_key: str,
+    client: Optional[T],
+    client_type: Type[T],
+) -> T:
+    """Create client options with API key - shared logic."""
+    return client or client_type(client_options=ClientOptions(api_key=api_key))
 
 
 class SyncPlacesTransport(Protocol):
@@ -48,9 +59,7 @@ class GoogleSyncTransport:
     """Synchronous transport implementation for Google Places API."""
 
     def __init__(self, api_key: str, client: Optional[PlacesClient] = None) -> None:
-        self.client = client or PlacesClient(
-            client_options=ClientOptions(api_key=api_key)
-        )
+        self.client = _get_places_client(api_key, client, PlacesClient)
 
     def autocomplete_places(self, *, request: dict[str, Any], **kwargs: Any) -> Any:
         return self.client.autocomplete_places(request=request, **kwargs)
@@ -75,9 +84,7 @@ class GoogleAsyncTransport:
     def __init__(
         self, api_key: str, client: Optional[PlacesAsyncClient] = None
     ) -> None:
-        self.client = client or PlacesAsyncClient(
-            client_options=ClientOptions(api_key=api_key)
-        )
+        self.client = _get_places_client(api_key, client, PlacesAsyncClient)
 
     async def autocomplete_places(
         self, *, request: dict[str, Any], **kwargs: Any

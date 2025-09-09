@@ -73,7 +73,7 @@ def real_bookalimo_credentials() -> Optional[Credentials]:
             is_customer=user_data.get("is_customer", "false").lower() == "true",
         )
     except (json.JSONDecodeError, KeyError, ValueError) as e:
-        pytest.fail(f"Invalid BOOKALIMO_TESTING_USER format: {e}")
+        pytest.fail(f"Invalid BOOKALIMO_TESTING_USER format: {type(e).__name__}")
         raise AssertionError("unreachable") from e
 
 

@@ -31,12 +31,12 @@ def _load_iata_index() -> tuple[dict[str, Any], dict[str, list[str]]]:
 class RateType(Enum):
     """Rate types for reservations."""
 
-    P2P = 0  # Point-to-Point (best guess from context)
-    HOURLY = 1  # Hourly (best guess from context)
+    P2P = 0  # Point-to-Point
+    HOURLY = 1  # Hourly
     DAILY = 2  # Daily
     TOUR = 3  # Tour
     ROUND_TRIP = 4  # Round Trip
-    RT_HALF = 5  # RT Half
+    RT_HALF = 5  # Round Trip Half Day
 
 
 class LocationType(Enum):
@@ -76,16 +76,12 @@ class ReservationStatus(Enum):
 
 
 class CardHolderType(Enum):
-    """
-    Credit card holder types (API Documentation Unclear).
-    TODO: Update when API documentation is clarified by the API author.
-    Best guess based on typical credit card processing:
-    """
+    """Credit card holder types."""
 
-    PERSONAL = 0  # Personal/Individual account (best guess)
-    BUSINESS = 1  # Business/Corporate account (best guess)
-    # Note: Add UNKNOWN = 3 if you see this value in responses
-    UNKNOWN = 3  # From example in API doc
+    CORPORATE = 0
+    AGENCY = 1
+    THIRD_PARTY = 2
+    SAME_AS_PASSENGER = 3
 
 
 class City(ApiModel):
@@ -136,7 +132,12 @@ class Address(ApiModel):
     """
 
     google_geocode: Optional[dict[str, Any]] = Field(
-        default=None, description="Raw Google Geocoding API response (recommended)"
+        default=None,
+        description=(
+            "Raw Google Geocoding API result (recommended). "
+            "Common mistake is to use the response object instead of the result object. "
+            "You must use geocode_response['results'][0] to get the result object."
+        ),
     )
     city: Optional[City] = Field(
         default=None, description="Use only if google_geocode not available"
@@ -288,7 +289,7 @@ class CreditCard(ApiModel):
     zip: Optional[str] = None
     holder_type: Optional[CardHolderType] = Field(
         default=None,
-        description="Card holder type - API documentation unclear, using best guess",
+        description="Card holder type",
     )
 
 

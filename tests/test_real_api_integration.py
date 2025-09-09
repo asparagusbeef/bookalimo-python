@@ -23,20 +23,49 @@ from bookalimo.schemas.booking import (
 from bookalimo.transport.auth import Credentials
 
 
+def _get_real_credentials() -> Credentials:
+    """
+    Helper function to safely get real credentials for testing.
+
+    This avoids exposing credentials in pytest parameter display
+    when tests fail, which was the source of BOOKALIMO_TESTING_USER leaks.
+    """
+    import json
+    import os
+
+    testing_user_json = os.getenv("BOOKALIMO_TESTING_USER")
+    if not testing_user_json:
+        pytest.skip(
+            "Real Bookalimo credentials not available (BOOKALIMO_TESTING_USER not set)"
+        )
+        # pytest.skip() raises an exception, this line is never reached
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    # At this point, testing_user_json is guaranteed to be a non-empty string
+    try:
+        user_data = json.loads(testing_user_json)
+        return Credentials.create(
+            user_id=user_data["id"],
+            password=user_data["password"],
+            is_customer=user_data.get("is_customer", "false").lower() == "true",
+        )
+    except (json.JSONDecodeError, KeyError, ValueError):
+        pytest.skip("Invalid BOOKALIMO_TESTING_USER format")
+
+
 @pytest.mark.integration
 @pytest.mark.network
 class TestRealBookalimoAPI:
     """Integration tests against the real Bookalimo API."""
 
-    def test_real_credentials_parsing(self, real_bookalimo_credentials):
+    def test_real_credentials_parsing(self):
         """Test that real credentials are parsed correctly."""
-        if real_bookalimo_credentials is None:
-            pytest.skip("Real Bookalimo credentials not available")
+        credentials = _get_real_credentials()
 
-        assert isinstance(real_bookalimo_credentials, Credentials)
-        assert len(real_bookalimo_credentials.id) > 0
-        assert len(real_bookalimo_credentials.password_hash) == 64  # SHA256 hash
-        assert isinstance(real_bookalimo_credentials.is_customer, bool)
+        assert isinstance(credentials, Credentials)
+        assert len(credentials.id) > 0
+        assert len(credentials.password_hash) == 64  # SHA256 hash
+        assert isinstance(credentials.is_customer, bool)
 
     @pytest.mark.slow
     def test_real_sync_pricing_quote(
@@ -117,9 +146,9 @@ class TestRealBookalimoAPI:
                 pytest.fail(f"Authentication failed: {e}")
 
     @pytest.mark.slow
-    def test_real_reservations_list(self, skip_if_no_real_credentials):
+    def test_real_reservations_list(self):
         """Test listing real reservations."""
-        credentials = skip_if_no_real_credentials
+        credentials = _get_real_credentials()
 
         try:
             with Bookalimo(credentials=credentials) as client:
@@ -145,9 +174,9 @@ class TestRealBookalimoAPI:
                 pytest.fail(f"Authentication failed: {e}")
 
     @pytest.mark.slow
-    def test_real_api_error_handling(self, skip_if_no_real_credentials):
+    def test_real_api_error_handling(self):
         """Test error handling with invalid request to real API."""
-        _ = skip_if_no_real_credentials
+        _get_real_credentials()  # Just check credentials are available
 
         with pytest.raises(ValidationError):
             # Create an intentionally invalid location (missing required fields)
@@ -165,10 +194,10 @@ class TestRealBookalimoAPI:
 
     @pytest.mark.slow
     def test_real_api_with_various_rate_types(
-        self, skip_if_no_real_credentials, real_pickup_location, real_dropoff_location
+        self, real_pickup_location, real_dropoff_location
     ):
         """Test different rate types with real API."""
-        credentials = skip_if_no_real_credentials
+        credentials = _get_real_credentials()
 
         rate_types_to_test = [RateType.P2P, RateType.HOURLY]
 

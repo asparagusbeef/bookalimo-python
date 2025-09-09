@@ -5,76 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-09-08
+
+### Fixed
+- Google Places API key handling in geocoding requests
+- Schema serialization issues with enum handling
+- Optional field handling in Google Places models
+
+### Changed
+- **BREAKING**: Method calls updated from `search_text` to `search`
+- Refactored sync/async clients to reduce code duplication
+- Enhanced logging with secure parameter redaction
+- Improved schema serialization with context options
+- Updated documentation structure and content
+
 ## [1.0.1] - 2025-09-08
 
 ### Added
-- **Schemas**: New `FieldMaskInput` type for flexible field mask validation
-- **Google Places**: `autocomplete()` now accepts either a string input or a `AutocompletePlacesRequest` object
-- **Google Places**: New `resolve_airport()` method for advanced airport resolution with confidence scoring
-- **Google Places**: Support for `SearchTextRequest` objects in `search()` method for advanced filtering
-- **Schemas**: New `ResolvedAirport` model with text and proximity confidence scores
-- **Schemas**: New `RankPreference` enum for search result ranking (`DISTANCE`, `RELEVANCE`)
-- **Schemas**: New `SearchTextRequest` model with comprehensive search parameters
-- **Schemas**: New `SearchTextResponse` model for text search API responses
--
+- Enhanced Google Places integration with `autocomplete()` and `resolve_airport()` methods
+- New `SearchTextRequest` model for advanced search filtering
+- Airport resolution with confidence scoring
+- Flexible field mask validation
+
 ### Changed
-- **BREAKING**: `GooglePlace` model renamed from `Place` in `place.py` for clarity
-- **BREAKING**: Removed `iata_code` field from `Place` model (use `resolve_airport()` instead)
-- **Google Places**: Enhanced `search()` method now accepts either simple queries or `SearchTextRequest` objects
-- **Google Places**: Updated `get()` method to accept optional `GetPlaceRequest` objects instead of raw place IDs for better flexibility
-- **Google Places**: Removed the restrictive `Fields` and `PlaceListFields` types and replaced them with `FieldMaskInput` and `FieldPath` for better flexibility
-- **Schemas**: `PlaceType` converted to string enum (`StrEnum`)
-- **Schemas**: `PriceLevel` and `BusinessStatus` converted to integer enums (`IntEnum`)
-- **Schemas**: Enhanced `AddressDescriptor` model with detailed landmark and area information
-- **Common**: Moved shared utilities from client files to `common.py` for better code organization
-- **Documentation**: Updated CI to have docs share README.md, CHANGELOG.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, and removed index.md from docs folder
-- **Refactor**: Common code from `/integrations/google_places/client_async.py` and `/integrations/google_places/client_sync.py` to `/integrations/google_places/common.py` + created `transports.py` for protocol definition.
+- **BREAKING**: `GooglePlace` model renamed from `Place`
+- **BREAKING**: Removed `iata_code` field (use `resolve_airport()` instead)
+- Enhanced search and get methods with more flexible input options
+- Improved schema organization and enum handling
 
 ## [1.0.0] - 2025-09-07
 
 ### Changed
-- **MAJOR REFACTOR**: Complete SDK architecture overhaul for clean, production-ready design
-- New client interface: `Bookalimo` (sync) and `AsyncBookalimo` (async) with resource-style services
-- Services-based architecture: `client.reservations.*` and `client.pricing.*` methods
-- Moved to clean transport layer with proper sync/async implementations
-- Reorganized schemas: `schemas/booking.py` and `schemas/places/` structure
-- Google Places moved to optional `integrations/google_places` with `pip install bookalimo[places]`
-- Clean exception hierarchy: `BookalimoError`, `BookalimoHTTPError`, `BookalimoTimeout`, etc.
-- Removed factory helper methods (users import and use models directly - more Pythonic)
-- Simplified logging - uses standard Python logging, respects user configuration
+- **MAJOR REFACTOR**: Complete SDK architecture overhaul
+- New client interface: `Bookalimo` (sync) and `AsyncBookalimo` (async)
+- Services-based architecture: `client.reservations.*` and `client.pricing.*`
+- Google Places moved to optional integration with `pip install bookalimo[places]`
+- Clean exception hierarchy and improved error handling
 
 ### Added
-- Sync client support alongside existing async client
-- Resource-style API: `client.reservations.list()`, `client.pricing.quote()`, etc.
-- Comprehensive retry logic with exponential backoff and jitter
-- Optional Google Places integration behind `[places]` extra
-- `BookalimoValidationError` for aggregated, field-level validation errors.
-- Logging improvements and `get_logger()` export; optional `http_timeout` on `Bookalimo`.
+- Sync client support alongside async client
+- Resource-style API methods
+- Comprehensive retry logic with exponential backoff
+- Enhanced logging system
 
 ### Removed
-- Old `BookALimo` wrapper class (replaced with `AsyncBookalimo` and `Bookalimo`)
-- Factory helper methods (`create_address_location`, etc.) - use models directly
-- Authenticated model duplicates (simplified credential injection)
-- `enable_debug_logging`/`disable_debug_logging` functions -> use `BOOKALIMO_LOG_LEVEL` environment variable
+- Old `BookALimo` wrapper class
+- Factory helper methods (use models directly)
 
 ## [0.1.5] - 2025-09-04
 
 ### Fixed
-- Fix type hints for logging decorator
+- Type hints for logging decorator
 
 ## [0.1.4] - 2025-09-02
 
 ### Added
-- logging handling + documentation
+- Logging handling and documentation
 
 ### Fixed
-- Fix typo in base_url
+- Base URL typo
 
 ## [0.1.3] - 2025-09-02
 
 ### Changed
-- Moved `BookalimoError` to a separate `exceptions.py` module.
-- Updated README.md.
+- Moved `BookalimoError` to separate `exceptions.py` module
+- Updated README.md
 
 ## [0.1.2] - 2025-09-02
 
@@ -90,9 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Initial release of bookalimo Python SDK
-- Support for all Book-A-Limo API endpoints
-- Pydantic models for request/response validation
-- Async/await support with httpx
-- Complete type hints
-- Error handling and custom exceptions
-- Documentation with MkDocs
+- Support for Book-A-Limo API endpoints
+- Pydantic models and async support
+- Type hints and error handling
+- Documentation

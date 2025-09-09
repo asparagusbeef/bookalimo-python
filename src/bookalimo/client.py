@@ -59,7 +59,7 @@ class AsyncBookalimo:
             google_places_api_key="your-google-api-key"
         ) as client:
             # Find locations using Google Places
-            places = await client.places.search_text("Empire State Building")
+            places = await client.places.search("Empire State Building")
 
             # Use in booking
             quote = await client.pricing.quote(
@@ -149,7 +149,7 @@ class AsyncBookalimo:
             Auth priority is as follows:
               - provided api key in constructor
               - GOOGLE_PLACES_API_KEY environment variable
-              - Google ADC - Except for Geocoding API.
+              - Google ADC - Not yet implemented.
         """
         if not _GOOGLE_PLACES_AVAILABLE:
             raise ImportError(
@@ -207,7 +207,7 @@ class Bookalimo:
             google_places_api_key="your-google-api-key"
         ) as client:
             # Find locations using Google Places
-            places = client.places.search_text("Empire State Building")
+            places = client.places.search("Empire State Building")
 
             # Use in booking
             quote = client.pricing.quote(
@@ -278,7 +278,7 @@ class Bookalimo:
             Auth priority is as follows:
               - provided api key in constructor
               - GOOGLE_PLACES_API_KEY environment variable
-              - Google ADC - Except for Geocoding API.
+              - Google ADC - Not yet implemented.
         """
         if not _GOOGLE_PLACES_AVAILABLE:
             raise ImportError(

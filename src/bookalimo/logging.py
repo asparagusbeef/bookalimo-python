@@ -21,6 +21,7 @@ from collections.abc import Awaitable, Iterable, Mapping
 from functools import wraps
 from time import perf_counter
 from typing import Any, Callable, TypeVar
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from typing_extensions import ParamSpec
 
@@ -64,6 +65,87 @@ else:
     logger.addHandler(logging.NullHandler())
 
 REDACTED = "******"
+
+# Sensitive query parameter names (case-insensitive)
+SENSITIVE_QUERY_PARAMS = {
+    "token",
+    "access_token",
+    "refresh_token",
+    "api_key",
+    "apikey",
+    "key",
+    "password",
+    "pass",
+    "pwd",
+    "secret",
+    "auth",
+    "authorization",
+    "code",
+    "auth_code",
+    "verification_code",
+    "otp",
+    "session",
+    "session_id",
+    "sid",
+    "csrf_token",
+    "xsrf_token",
+    "signature",
+    "sig",
+    "hash",
+    "nonce",
+    "state",
+}
+
+
+def redact_url(
+    url: str, *, replacement: str = REDACTED, sensitive_params: set[str] | None = None
+) -> str:
+    """
+    Redact sensitive query parameters from a URL.
+
+    Args:
+        url: The URL to redact
+        replacement: The replacement string for sensitive values
+        sensitive_params: Set of parameter names to redact (case-insensitive)
+                         Defaults to SENSITIVE_QUERY_PARAMS
+
+    Returns:
+        The URL with sensitive query parameters redacted
+
+    Example:
+        >>> redact_url("https://api.example.com/auth?token=secret123&user=john")
+        "https://api.example.com/auth?token=******&user=john"
+    """
+    if not isinstance(url, str) or not url:
+        return _safe_str(url)
+
+    try:
+        parts = urlsplit(url)
+        if not parts.query:
+            return url
+
+        sensitive = sensitive_params or SENSITIVE_QUERY_PARAMS
+        sensitive_lower = {name.lower() for name in sensitive}
+
+        # Parse and redact query parameters
+        pairs = parse_qsl(parts.query, keep_blank_values=True)
+        redacted_pairs = []
+
+        for key, value in pairs:
+            if key.lower() in sensitive_lower:
+                redacted_pairs.append((key, replacement))
+            else:
+                redacted_pairs.append((key, value))
+
+        # Reconstruct URL with redacted query
+        redacted_query = urlencode(redacted_pairs, doseq=True)
+        return urlunsplit(
+            (parts.scheme, parts.netloc, parts.path, redacted_query, parts.fragment)
+        )
+
+    except Exception:
+        # If URL parsing fails, return a safe representation
+        return _safe_str(url)
 
 
 def mask_token(s: Any, *, show_prefix: int = 6, show_suffix: int = 2) -> str:
@@ -177,6 +259,27 @@ def get_logger(name: str | None = None) -> logging.Logger:
     if name:
         return logging.getLogger(f"bookalimo.{name}")
     return logger
+
+
+def configure_httpx_logging() -> None:
+    """
+    Configure httpx and httpcore loggers to prevent exposure of sensitive query parameters.
+
+    This is called automatically by the transport classes when debug logging is enabled.
+    It raises the log level of httpx/httpcore to WARNING to prevent their built-in
+    request/response logs from exposing URLs with sensitive query parameters.
+    """
+    # Silence httpx's built-in request/response logs that might contain sensitive URLs
+    httpx_logger = logging.getLogger("httpx")
+    httpcore_logger = logging.getLogger("httpcore.http11")
+
+    # If our logger is at DEBUG level, silence httpx to prevent duplicate/unredacted logs
+    if logger.isEnabledFor(logging.DEBUG):
+        if httpx_logger.level < logging.WARNING:
+            httpx_logger.setLevel(logging.WARNING)
+        # Keep httpcore at INFO level for connection details (no URLs)
+        if httpcore_logger.level < logging.INFO:
+            httpcore_logger.setLevel(logging.INFO)
 
 
 # ---- decorator for async methods --------------------------------------------

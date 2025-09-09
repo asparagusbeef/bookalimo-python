@@ -1,79 +1,101 @@
 # Base Models
 
-Core Pydantic models that provide foundational functionality for the Bookalimo SDK.
+Foundation models providing automatic field conversion and serialization for Bookalimo API objects.
 
 ## ApiModel
 
-::: bookalimo.schemas.base.ApiModel
+All Bookalimo API models inherit from `ApiModel`, which provides:
 
-The `ApiModel` class serves as the foundation for all API data structures in the Bookalimo SDK. It provides:
+- **Automatic field conversion** - Python `snake_case` ↔ API `camelCase`
+- **Flexible input** - accepts both naming conventions
+- **Configurable serialization** - control enum and case output
 
-- **Automatic field name conversion**: Python `snake_case` fields are automatically converted to API `camelCase` format
-- **Bidirectional compatibility**: Accepts both snake_case and camelCase field names on input
-- **Enum serialization**: Configurable enum output (by value or name)
-- **Unknown field handling**: Ignores unknown fields from API responses
+### Field Name Conversion
 
-### Key Features
-
-#### Field Name Conversion
-
-All field names are automatically converted between Python conventions and API format:
+Models automatically handle field name conversion:
 
 ```python
-from bookalimo.schemas.base import ApiModel
+from bookalimo.schemas.booking import PriceRequest, RateType
 
-class Example(ApiModel):
-    user_name: str  # → userName in API
-    date_time: str  # → dateTime in API
-```
-
-#### Enum Handling
-
-Enums are serialized by value by default, but can be configured:
-
-```python
-# Default: serialize by value
-data = model.model_dump()  
-
-# Serialize by name
-data = model.model_dump(context={"enum_out": "name"})
-```
-
-#### Input Flexibility
-
-Models accept both field naming conventions:
-
-```python
-# Both work:
-model = Example(user_name="john")
-model = Example(userName="john")
-```
-
-### Configuration
-
-The model uses Pydantic v2 configuration:
-
-- `alias_generator=to_camel`: Auto-generates camelCase aliases
-- `validate_by_alias=True`: Accepts camelCase input
-- `validate_by_name=True`: Accepts snake_case input  
-- `serialize_by_alias=True`: Uses camelCase in output
-- `use_enum_values=False`: Custom enum handling via serializer
-- `extra="ignore"`: Ignores unknown API fields
-
-### Usage
-
-All SDK models inherit from `ApiModel`:
-
-```python
-from bookalimo.schemas.booking import Location, LocationType
-from bookalimo.schemas.base import ApiModel
-
-# All booking models extend ApiModel
-location = Location(
-    type=LocationType.ADDRESS,
-    address=address_data
+# Python snake_case (natural)
+request = PriceRequest(
+    rate_type=RateType.P2P,
+    date_time="12/25/2024 03:00 PM",
+    car_class_code="SD",
+    # ...
 )
 
-# Serialization uses camelCase automatically
-json_data = location.model_dump()
+# API camelCase also accepted on input:
+request = PriceRequest(
+    rateType=RateType.P2P,
+    dateTime="12/25/2024 03:00 PM",
+    carClassCode="SD",
+    # ...
+)
+
+# Output uses camelCase by default:
+data = request.model_dump()
+# → {"rateType": 0, "dateTime": "12/25/2024 03:00 PM", "carClassCode": "SD", ...}
 ```
+
+### Serialization Contexts
+
+Control output format using `context` parameter:
+
+```python
+# Default: enums by value, camelCase fields
+data = request.model_dump()
+# → {"rateType": 0, "dateTime": "...", "carClassCode": "SD"}
+
+# Enums by name
+data = request.model_dump(context={"enum_out": "name"})
+# → {"rateType": "P2P", "dateTime": "...", "carClassCode": "SD"}
+
+# snake_case fields
+data = request.model_dump(context={"case": "snake"})
+# → {"rate_type": 0, "date_time": "...", "car_class_code": "SD"}
+
+# Combined options
+data = request.model_dump(context={"enum_out": "name", "case": "snake"})
+# → {"rate_type": "P2P", "date_time": "...", "car_class_code": "SD"}
+
+# Boolean alias for case
+data = request.model_dump(context={"snake_case": True})
+# → {"rate_type": 0, "date_time": "...", "car_class_code": "SD"}
+```
+
+### Context Options
+
+- `enum_out`: `"value"` (default) or `"name"`
+- `case`: `"camel"` (default) or `"snake"`
+- `snake_case`: `True`/`False` (alias for `case`)
+
+### Usage Patterns
+
+**API Requests** (automatic):
+```python
+# SDK handles serialization internally
+quote = await client.pricing.quote(
+    rate_type=RateType.P2P,  # Automatically serialized
+    pickup=location,  # Automatically converted to camelCase
+    # ...
+)
+```
+
+**Custom Serialization**:
+```python
+# For logging or external APIs
+request_data = price_request.model_dump(
+    context={"enum_out": "name", "snake_case": True}
+)
+
+# For debugging
+debug_data = response.model_dump(context={"enum_out": "name"})
+print(f"Rate type: {debug_data['rateType']}")  # "P2P" instead of 0
+```
+
+## Important Notes
+
+- **Bookalimo models only**: This applies to `bookalimo.schemas.booking.*` models
+- **Google Places models**: Use standard Pydantic serialization (no automatic conversion)
+- **Unknown fields**: Ignored during deserialization (API evolution safety)

@@ -43,7 +43,8 @@ places = [
     "google-maps-places>=0.1.0",
     "google-api-core>=2.0.0",
     "numpy>=2.0.0",
-    "rapidfuzz>=3.0.0"
+    "rapidfuzz>=3.0.0",
+    "typing-extensions>=4.15.0; python_version < '3.11'"
 ]
 dev = [
     "pytest>=7.0.0",
@@ -96,7 +97,7 @@ lint.select = [
     "UP", # pyupgrade
 ]
 lint.ignore = [
-    "E501", # line too long, handled by black
+    "E501", # line too long, handled by ruff-format
     "B008", # do not perform function calls in argument defaults
     "C901", # too complex
     "UP045", # until I have time to Optional[] -> X | None everywhere.
