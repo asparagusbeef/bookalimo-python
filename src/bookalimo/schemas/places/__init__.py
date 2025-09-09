@@ -7,6 +7,7 @@ from .google import (
     AutocompletePlacesResponse,
     Circle,
     EVConnectorType,
+    EVOptions,
     FormattableText,
     GeocodingRequest,
     GetPlaceRequest,
@@ -53,4 +54,5 @@ __all__ = [
     "FieldMaskInput",
     "FieldPath",
     "compile_field_mask",
+    "EVOptions",
 ]
