@@ -1,0 +1,75 @@
+site_name: Bookalimo Python SDK
+repo_name: asparagusbeef/bookalimo-python
+repo_url: https://github.com/asparagusbeef/bookalimo-python
+docs_dir: .
+site_dir: ../site
+
+nav:
+  - Home: index.md
+  - User Guide:
+    - Quickstart: guide/quickstart.md
+    - Authentication: guide/auth.md
+    - Bookings: guide/bookings.md
+    - Google Places: guide/places.md
+    - Advanced: guide/advanced.md
+    - Error Handling: guide/errors.md
+  - API Reference:
+    - Overview: api/index.md
+    - Clients: api/clients.md
+    - Services:
+      - Pricing: api/services/pricing.md
+      - Reservations: api/services/reservations.md
+    - Schemas:
+      - Base Models: api/schemas/base.md
+      - Booking: api/schemas/booking.md
+      - Places: api/schemas/places.md
+    - Exceptions: api/exceptions.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: false
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
