@@ -50,7 +50,7 @@ class AsyncTransport(AsyncBaseTransport):
         backoff: float = DEFAULT_BACKOFF,
     ):
         self.base_url = base_url.rstrip("/")
-        self.credentials = credentials
+        self._credentials = credentials
         self.retries = retries
         self.backoff = backoff
         self.headers = {
@@ -71,6 +71,14 @@ class AsyncTransport(AsyncBaseTransport):
                 timeouts,
                 user_agent,
             )
+
+    @property
+    def credentials(self) -> Optional[Credentials]:
+        return self._credentials
+
+    @credentials.setter
+    def credentials(self, credentials: Optional[Credentials]) -> None:
+        self._credentials = credentials
 
     @overload
     async def post(self, path: str, model: BaseModel) -> Any: ...

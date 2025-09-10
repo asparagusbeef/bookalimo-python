@@ -355,30 +355,3 @@ class ReservationBase(SharedModel):
     dropoff: str
     car_class: str
     status: Optional[ReservationStatus] = None
-
-
-class EditableReservationRequestBase(SharedModel):
-    """
-    Base editable reservation for modifications.
-
-    Note: API documentation inconsistency - credit_card marked as required in model
-    but omitted in edit examples. Making it optional as edit requests may not need it.
-    """
-
-    confirmation: str
-    is_cancel_request: bool = False
-    rate_type: Optional[RateType] = None
-    pickup_date: Optional[str] = Field(default=None, description="MM/dd/yyyy format")
-    pickup_time: Optional[str] = Field(default=None, description="hh:mm tt format")
-    stops: Optional[list["StopBase"]] = None
-    credit_card: Optional["CreditCardBase"] = Field(
-        default=None,
-        description="Conditionally required - unclear from API docs when exactly",
-    )
-    passengers: Optional[int] = None
-    luggage: Optional[int] = None
-    pets: Optional[int] = None
-    car_seats: Optional[int] = None
-    boosters: Optional[int] = None
-    infants: Optional[int] = None
-    other: Optional[str] = Field(default=None, description="Other changes not listed")

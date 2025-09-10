@@ -7,7 +7,8 @@ import re
 import unicodedata
 from functools import lru_cache
 from importlib.resources import files
-from typing import Any, Optional, cast
+from types import MappingProxyType
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -29,10 +30,6 @@ AIRPORTY_TYPES = {
     "airstrip",
     "heliport",
 }
-
-# Small bonus when a candidate airport’s IATA/ICAO matches codes hinted by Places
-CODE_BONUS_QUERY = 15.0  # user typed a code (strong)
-CODE_BONUS_PLACES = 8.0  # code inferred from Places strings (softer)
 
 
 # ---------- Helpers ----------
@@ -62,26 +59,6 @@ def _haversine_km_scalar_to_many(
     return cast(NDArray[np.float64], 6371.0088 * c)  # mean Earth radius (km)
 
 
-def _looks_like_code(q: str) -> tuple[Optional[str], Optional[str]]:
-    q = q.strip().upper()
-    if re.fullmatch(r"[A-Z0-9]{3}", q):
-        return (q, None)  # likely IATA
-    if re.fullmatch(r"[A-Z0-9]{4}", q):
-        return (None, q)  # likely ICAO
-    return (None, None)
-
-
-def _extract_codes_from_text(s: str) -> tuple[set[str], set[str]]:
-    """
-    Pull 3- or 4-char uppercase tokens that *could* be codes.
-    We'll only use these with a small bonus and only if the place looks airport-ish.
-    """
-    tokens = set(re.findall(r"\b[A-Z0-9]{3,4}\b", s.upper()))
-    iata = {t for t in tokens if re.fullmatch(r"[A-Z]{3}", t)}
-    icao = {t for t in tokens if re.fullmatch(r"[A-Z0-9]{4}", t)}
-    return iata, icao
-
-
 def _place_points(places: list[GooglePlace]) -> list[tuple[float, float]]:
     """
     Extract (lat, lon) from Places responses. Prefers 'location', then viewport center,
@@ -108,18 +85,13 @@ def _place_points(places: list[GooglePlace]) -> list[tuple[float, float]]:
     return pts
 
 
-def _place_hints_and_codes(
-    places: list[GooglePlace],
-) -> tuple[list[str], set[str], set[str]]:
+def _place_hints(places: list[GooglePlace]) -> list[str]:
     """
-    Collect a few high-utility strings from Places to augment text matching,
-    plus soft code candidates (IATA/ICAO) extracted from those strings.
-    We prioritize places whose types include airport-ish categories.
+    Collect high-utility strings from Places to augment text matching.
+    Prioritizes places whose types include airport-ish categories.
     """
     hints_prioritized: list[str] = []
     hints_general: list[str] = []
-    iata_cand: set[str] = set()
-    icao_cand: set[str] = set()
 
     for p in places or []:
         types = set(getattr(p, "types", []) or [])
@@ -151,13 +123,6 @@ def _place_hints_and_codes(
         if not candidates:
             continue
 
-        # Extract soft code candidates from the most descriptive strings
-        for s in candidates[:2]:
-            i3, i4 = _extract_codes_from_text(s)
-            if airporty:
-                iata_cand |= i3
-                icao_cand |= i4
-
         # Prioritize hints if the place is airport-ish
         (hints_prioritized if airporty else hints_general).extend(candidates[:2])
 
@@ -176,8 +141,7 @@ def _place_hints_and_codes(
                 break
         return out
 
-    hints = dedup_cap(hints_prioritized, cap=3) + dedup_cap(hints_general, cap=2)
-    return hints, iata_cand, icao_cand
+    return dedup_cap(hints_prioritized, cap=3) + dedup_cap(hints_general, cap=2)
 
 
 def _parse_coord(s: Optional[str]) -> float:
@@ -193,18 +157,44 @@ def _parse_coord(s: Optional[str]) -> float:
         return float("nan")
 
 
+def _frozen_np_float(arr_like: List[float]) -> NDArray[np.float64]:
+    """Create a float64 numpy array and set writeable=False."""
+    a = np.array(arr_like, dtype=np.float64)
+    a.setflags(write=False)
+    return cast(NDArray[np.float64], a)
+
+
+def _frozen_np_bool(arr_like: List[bool]) -> NDArray[np.bool_]:
+    """Create a bool numpy array and set writeable=False."""
+    a = np.array(arr_like, dtype=bool)
+    a.setflags(write=False)
+    return cast(NDArray[np.bool_], a)
+
+
+# ---------- Data loading with immutable return + dual indexes ----------
 @lru_cache(maxsize=1)
-def _load_data() -> dict[str, Any]:
+def _load_data() -> MappingProxyType[str, Any]:
     """
     Loads and caches airport rows and vectorized fields.
     Expects CSV columns: icao,iata,name,city,subd,country,elevation,lat,lon,tz,lid
+
+    Returns an immutable mapping with:
+      - rows: tuple[dict[str, Any]]          (each row dict should be treated as read-only)
+      - lat_rad, lon_rad: np.ndarray (float64, write-protected)
+      - keys: tuple[str]                     (normalized text used for fuzzy matching)
+      - codes: tuple[tuple[str, str]]        (iata, icao)
+      - has_coords: np.ndarray (bool, write-protected)
+      - idx_iata: Mapping[str, int]          (UPPERCASE IATA -> row index)
+      - idx_icao: Mapping[str, int]          (UPPERCASE ICAO -> row index)
     """
-    rows: list[dict[str, Any]] = []
-    lat_rad: list[float] = []
-    lon_rad: list[float] = []
-    keys: list[str] = []  # normalized text used for fuzzy matching
-    codes: list[tuple[str, str]] = []  # (iata, icao)
-    has_coords: list[bool] = []
+    rows_mut: List[Dict[str, Any]] = []
+    lat_rad_mut: List[float] = []
+    lon_rad_mut: List[float] = []
+    keys_mut: List[str] = []
+    codes_mut: List[Tuple[str, str]] = []
+    has_coords_mut: List[bool] = []
+    idx_iata_mut: Dict[str, int] = {}
+    idx_icao_mut: Dict[str, int] = {}
 
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -214,15 +204,12 @@ def _load_data() -> dict[str, Any]:
             iata = (r.get("iata") or "").strip() or None
             icao = (r.get("icao") or "").strip() or None
 
-            # Robust coords: keep NaN if missing/invalid
-            lat_s = cast(Optional[str], r.get("lat"))
-            lon_s = cast(Optional[str], r.get("lon"))
-            lat = _parse_coord(lat_s)
-            lon = _parse_coord(lon_s)
-
+            lat = _parse_coord(cast(Optional[str], r.get("lat")))
+            lon = _parse_coord(cast(Optional[str], r.get("lon")))
             valid = not (math.isnan(lat) or math.isnan(lon))
 
-            rows.append(
+            idx = len(rows_mut)
+            rows_mut.append(
                 {
                     "name": name,
                     "city": city,
@@ -232,24 +219,110 @@ def _load_data() -> dict[str, Any]:
                     "lon": lon,
                 }
             )
-            lat_rad.append(math.radians(lat) if valid else float("nan"))
-            lon_rad.append(math.radians(lon) if valid else float("nan"))
-            has_coords.append(valid)
+
+            # radians() propagates NaN; no conditional needed
+            lat_rad_mut.append(math.radians(lat))
+            lon_rad_mut.append(math.radians(lon))
+            has_coords_mut.append(valid)
 
             code_bits = (
                 " ".join([c for c in (iata, icao) if c]) if (iata or icao) else ""
             )
-            keys.append(_norm(f"{name} {city} {code_bits}"))
-            codes.append((iata or "", icao or ""))
+            keys_mut.append(_norm(f"{name} {city} {code_bits}"))
+            codes_mut.append((iata or "", icao or ""))
 
-    return {
-        "rows": rows,
-        "lat_rad": np.array(lat_rad, dtype=float),
-        "lon_rad": np.array(lon_rad, dtype=float),
-        "keys": np.array(keys, dtype=object),
-        "codes": codes,
-        "has_coords": np.array(has_coords, dtype=bool),
-    }
+            # Build dual indexes (first occurrence wins)
+            if iata:
+                iu = iata.upper()
+                if iu not in idx_iata_mut:
+                    idx_iata_mut[iu] = idx
+            if icao:
+                iu = icao.upper()
+                if iu not in idx_icao_mut:
+                    idx_icao_mut[iu] = idx
+
+    # Freeze everything
+    rows = tuple(rows_mut)
+    lat_rad = _frozen_np_float(lat_rad_mut)
+    lon_rad = _frozen_np_float(lon_rad_mut)
+    keys = tuple(keys_mut)
+    codes = tuple(codes_mut)
+    has_coords = _frozen_np_bool(has_coords_mut)
+    idx_iata = MappingProxyType(dict(idx_iata_mut))  # proxy ensures read-only
+    idx_icao = MappingProxyType(dict(idx_icao_mut))
+
+    # Return a read-only top-level mapping
+    return MappingProxyType(
+        {
+            "rows": rows,
+            "lat_rad": lat_rad,
+            "lon_rad": lon_rad,
+            "keys": keys,
+            "codes": codes,
+            "has_coords": has_coords,
+            "idx_iata": idx_iata,
+            "idx_icao": idx_icao,
+        }
+    )
+
+
+# ---------- Convenience lookups (O(1) via dual indexes) ----------
+def get_row_by_iata(code: str) -> Optional[dict[str, Any]]:
+    """Return the airport row for an IATA code, or None if not found."""
+    if not code:
+        return None
+    data = _load_data()
+    idx = data["idx_iata"].get(code.upper())
+    return data["rows"][idx] if idx is not None else None
+
+
+def get_row_by_icao(code: str) -> Optional[dict[str, Any]]:
+    """Return the airport row for an ICAO code, or None if not found."""
+    if not code:
+        return None
+    data = _load_data()
+    idx = data["idx_icao"].get(code.upper())
+    return data["rows"][idx] if idx is not None else None
+
+
+def _try_direct_code_lookup(query: str) -> Optional[ResolvedAirport]:
+    """
+    Try to resolve the query as a direct IATA or ICAO code match.
+    Returns ResolvedAirport with high confidence if found, None otherwise.
+    """
+    if not query:
+        return None
+
+    # Clean and normalize the query for code matching
+    code = query.strip().upper()
+    if not code:
+        return None
+
+    # Try IATA first (3 characters)
+    if len(code) == 3:
+        row = get_row_by_iata(code)
+        if row:
+            return ResolvedAirport(
+                name=row["name"],
+                city=row["city"],
+                iata_code=row["iata"],
+                icao_code=row["icao"],
+                confidence=0.95,  # High confidence for exact code matches
+            )
+
+    # Try ICAO (4 characters)
+    elif len(code) == 4:
+        row = get_row_by_icao(code)
+        if row:
+            return ResolvedAirport(
+                name=row["name"],
+                city=row["city"],
+                iata_code=row["iata"],
+                icao_code=row["icao"],
+                confidence=0.95,  # High confidence for exact code matches
+            )
+
+    return None
 
 
 # ---------- Main ----------
@@ -273,6 +346,11 @@ def resolve_airport(
     Returns:
         The list of resolved airports ordered by confidence.
     """
+
+    # First, try direct IATA/ICAO code lookup for exact matches
+    direct_match = _try_direct_code_lookup(query)
+    if direct_match is not None:
+        return [direct_match]
 
     data = _load_data()
     rows: list[dict[str, Any]] = data["rows"]
@@ -298,60 +376,11 @@ def resolve_airport(
         prox = 100.0 * np.exp(-min_dist / float(DIST_KM_SCALE))
 
     # ---- Text score: best across augmented queries ----
-    hints, iata_from_places, icao_from_places = _place_hints_and_codes(places_response)
+    hints = _place_hints(places_response)
     q_variants = [_norm(query)] + [_norm(f"{query} {h}") for h in hints]
     # Single cdist call over up to 1+5 variants keeps things fast
     scores_matrix = process.cdist(q_variants, data["keys"], scorer=fuzz.token_set_ratio)
     text_scores = np.array(scores_matrix.max(axis=0), dtype=float)
-
-    # ---- Code bonuses ----
-    # 1) If the *user* typed a code, stronger bonus
-    iata_q, icao_q = _looks_like_code(query)
-    if iata_q or icao_q:
-        if iata_q:
-            text_scores += (
-                np.fromiter(
-                    ((1.0 if iata_q == iata else 0.0) for iata, _ in data["codes"]),
-                    float,
-                    count=n,
-                )
-                * CODE_BONUS_QUERY
-            )
-        if icao_q:
-            text_scores += (
-                np.fromiter(
-                    ((1.0 if icao_q == icao else 0.0) for _, icao in data["codes"]),
-                    float,
-                    count=n,
-                )
-                * CODE_BONUS_QUERY
-            )
-
-    # 2) If Places hints include codes (e.g., “JFK Terminal 4”), soft bonus
-    if iata_from_places:
-        text_scores += (
-            np.fromiter(
-                (
-                    (1.0 if (iata in iata_from_places) else 0.0)
-                    for iata, _ in data["codes"]
-                ),
-                float,
-                count=n,
-            )
-            * CODE_BONUS_PLACES
-        )
-    if icao_from_places:
-        text_scores += (
-            np.fromiter(
-                (
-                    (1.0 if (icao in icao_from_places) else 0.0)
-                    for _, icao in data["codes"]
-                ),
-                float,
-                count=n,
-            )
-            * CODE_BONUS_PLACES
-        )
 
     # Cap to 0..100
     text_scores = np.clip(text_scores, 0.0, 100.0)

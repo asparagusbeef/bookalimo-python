@@ -46,4 +46,4 @@ Travel agency or corporate account info with `id` and optional booker details.
 - `BookRequest` / `BookResponse` - reservation booking
 - `ListReservationsRequest` / `ListReservationsResponse` - reservation listing
 - `GetReservationRequest` / `GetReservationResponse` - reservation details
-- `EditableReservationRequest` / `EditReservationResponse` - modifications
+- `EditReservationRequest` / `EditReservationResponse` - modifications

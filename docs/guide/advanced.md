@@ -31,7 +31,7 @@ custom_transport = AsyncTransport(
 
 # Use custom transport
 async with AsyncBookalimo(transport=custom_transport) as client:
-    quote = await client.pricing.quote(...)
+    quote = await client.pricing.quote(PriceRequest(...))
 ```
 
 ## Configuration Constants
@@ -99,7 +99,7 @@ import logging
 logging.getLogger("bookalimo.transport").setLevel(logging.DEBUG)
 
 async with AsyncBookalimo(credentials=creds) as client:
-    quote = await client.pricing.quote(...)
+    quote = await client.pricing.quote(PriceRequest(...))
     # Logs show:
     # → [abc12345] POST /booking/price/ body_keys=['dateTime', 'pickup', ...]
     # ← [abc12345] 200 /booking/price/ in 245.3 ms len=1024
@@ -141,5 +141,5 @@ async with httpx.AsyncClient(
     )
 
     async with AsyncBookalimo(transport=transport) as client:
-        quote = await client.pricing.quote(...)
+        quote = await client.pricing.quote(PriceRequest(...))
 ```

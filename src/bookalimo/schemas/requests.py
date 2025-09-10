@@ -16,7 +16,6 @@ from .shared import (
     BreakdownItemBase,
     CityBase,
     CreditCardBase,
-    EditableReservationRequestBase,
     LocationBase,
     MeetGreetAdditionalBase,
     MeetGreetBase,
@@ -117,10 +116,23 @@ class Reservation(ReservationBase, RequestModel):
     pass
 
 
-class EditableReservationRequest(EditableReservationRequestBase, RequestModel):
+class EditReservationRequest(RequestModel):
     """Editable reservation for modifications (requests)."""
 
-    pass
+    confirmation: str
+    is_cancel_request: bool = False
+    rate_type: Optional[RateType] = None
+    pickup_date: Optional[str] = Field(default=None, description="MM/dd/yyyy format")
+    pickup_time: Optional[str] = Field(default=None, description="hh:mm tt format")
+    stops: Optional[list[Stop]] = None
+    credit_card: Optional[CreditCard] = None
+    passengers: Optional[int] = None
+    luggage: Optional[int] = None
+    pets: Optional[int] = None
+    car_seats: Optional[int] = None
+    boosters: Optional[int] = None
+    infants: Optional[int] = None
+    other: Optional[str] = Field(default=None, description="Other changes not listed")
 
 
 # Pure Request Models

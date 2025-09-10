@@ -15,13 +15,13 @@ from .shared import (
     BreakdownItemBase,
     CityBase,
     CreditCardBase,
-    EditableReservationRequestBase,
     LocationBase,
     LocationType,
     MeetGreetAdditionalBase,
     MeetGreetBase,
     PassengerBase,
     PriceBase,
+    RateType,
     ReservationBase,
     ReservationStatus,
     RewardBase,
@@ -117,13 +117,29 @@ class Reservation(ReservationBase, ResponseModel):
     pass
 
 
-class EditableReservationRequest(EditableReservationRequestBase, ResponseModel):
-    """Editable reservation for modifications (responses)."""
-
-    pass
-
-
 # Pure Response Models
+class ReservationData(ResponseModel):
+    """Editable reservation data returned in get reservation response."""
+
+    confirmation: str
+    is_cancel_request: bool = False
+    rate_type: Optional[RateType] = None
+    pickup_date: Optional[str] = Field(default=None, description="MM/dd/yyyy format")
+    pickup_time: Optional[str] = Field(default=None, description="hh:mm tt format")
+    stops: Optional[list[Stop]] = None
+    credit_card: Optional[CreditCard] = Field(
+        default=None,
+        description="Conditionally required - unclear from API docs when exactly",
+    )
+    passengers: Optional[int] = None
+    luggage: Optional[int] = None
+    pets: Optional[int] = None
+    car_seats: Optional[int] = None
+    boosters: Optional[int] = None
+    infants: Optional[int] = None
+    other: Optional[str] = Field(default=None, description="Other changes not listed")
+
+
 class PriceResponse(ResponseModel):
     """Response from get prices."""
 
@@ -155,7 +171,7 @@ class ListReservationsResponse(ResponseModel):
 class GetReservationResponse(ResponseModel):
     """Response from get reservation."""
 
-    reservation: EditableReservationRequest
+    reservation: "ReservationData"
     is_editable: bool
     status: Optional[ReservationStatus] = None
     is_cancellation_pending: bool

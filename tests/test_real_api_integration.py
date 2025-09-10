@@ -17,6 +17,7 @@ from bookalimo.schemas import (
     City,
     Location,
     LocationType,
+    PriceRequest,
     PriceResponse,
     RateType,
 )
@@ -77,13 +78,15 @@ class TestRealBookalimoAPI:
         try:
             with Bookalimo(credentials=credentials) as client:
                 quote = client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/01/2025 02:00 PM",
-                    pickup=real_pickup_location,
-                    dropoff=real_dropoff_location,
-                    passengers=2,
-                    luggage=1,
-                    customer_comment="SDK Integration Test - Safe to ignore",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/01/2025 02:00 PM",
+                        pickup=real_pickup_location,
+                        dropoff=real_dropoff_location,
+                        passengers=2,
+                        luggage=1,
+                        customer_comment="SDK Integration Test - Safe to ignore",
+                    )
                 )
 
                 # Verify response structure
@@ -118,13 +121,15 @@ class TestRealBookalimoAPI:
         try:
             async with AsyncBookalimo(credentials=credentials) as client:
                 quote = await client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/01/2025 03:00 PM",
-                    pickup=real_pickup_location,
-                    dropoff=real_dropoff_location,
-                    passengers=1,
-                    luggage=0,
-                    customer_comment="Async SDK Integration Test - Safe to ignore",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/01/2025 03:00 PM",
+                        pickup=real_pickup_location,
+                        dropoff=real_dropoff_location,
+                        passengers=1,
+                        luggage=0,
+                        customer_comment="Async SDK Integration Test - Safe to ignore",
+                    )
                 )
 
                 # Verify response structure
@@ -204,20 +209,20 @@ class TestRealBookalimoAPI:
         with Bookalimo(credentials=credentials) as client:
             for rate_type in rate_types_to_test:
                 try:
-                    extra_params = {}
+                    # Build request with conditional hours field
+                    request_data = {
+                        "rate_type": rate_type,
+                        "date_time": "12/01/2025 05:00 PM",
+                        "pickup": real_pickup_location,
+                        "dropoff": real_dropoff_location,
+                        "passengers": 1,
+                        "luggage": 1,
+                        "customer_comment": f"Rate type test: {rate_type.name}",
+                    }
                     if rate_type == RateType.HOURLY:
-                        extra_params["hours"] = 2  # Required for hourly bookings
+                        request_data["hours"] = 2  # Required for hourly bookings
 
-                    quote = client.pricing.quote(
-                        rate_type=rate_type,
-                        date_time="12/01/2025 05:00 PM",
-                        pickup=real_pickup_location,
-                        dropoff=real_dropoff_location,
-                        passengers=1,
-                        luggage=1,
-                        customer_comment=f"Rate type test: {rate_type.name}",
-                        **extra_params,
-                    )
+                    quote = client.pricing.quote(PriceRequest(**request_data))
 
                     # Should get a valid response for each rate type
                     assert quote.token
@@ -258,13 +263,15 @@ class TestRealBookalimoAPI:
             expected_msg = "API Error: Invalid credentials"
             with pytest.raises(BookalimoError) as exc_info:
                 client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/01/2025 06:00 PM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=1,
-                    luggage=0,
-                    customer_comment="Authentication test - Should fail",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/01/2025 06:00 PM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=1,
+                        luggage=0,
+                        customer_comment="Authentication test - Should fail",
+                    )
                 )
                 assert str(exc_info.value) == expected_msg
 
@@ -289,13 +296,15 @@ class TestRealBookalimoAPI:
             # This should timeout quickly
             with pytest.raises((BookalimoError, BookalimoHTTPError)):
                 client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/01/2025 07:00 PM",
-                    pickup=real_pickup_location,
-                    dropoff=real_dropoff_location,
-                    passengers=1,
-                    luggage=0,
-                    customer_comment="Timeout test",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/01/2025 07:00 PM",
+                        pickup=real_pickup_location,
+                        dropoff=real_dropoff_location,
+                        passengers=1,
+                        luggage=0,
+                        customer_comment="Timeout test",
+                    )
                 )
 
 
@@ -320,13 +329,15 @@ class TestRealAPIPerformance:
             async def make_quote(i: int) -> Optional[PriceResponse]:
                 try:
                     return await client.pricing.quote(
-                        rate_type=RateType.P2P,
-                        date_time="12/01/2025 08:00 PM",
-                        pickup=real_pickup_location,
-                        dropoff=real_dropoff_location,
-                        passengers=1,
-                        luggage=0,
-                        customer_comment=f"Concurrent test {i} - Safe to ignore",
+                        PriceRequest(
+                            rate_type=RateType.P2P,
+                            date_time="12/01/2025 08:00 PM",
+                            pickup=real_pickup_location,
+                            dropoff=real_dropoff_location,
+                            passengers=1,
+                            luggage=0,
+                            customer_comment=f"Concurrent test {i} - Safe to ignore",
+                        )
                     )
                 except BookalimoHTTPError as e:
                     # API might rate limit or reject concurrent requests
@@ -361,13 +372,15 @@ class TestRealAPIPerformance:
 
             try:
                 quote = client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/01/2025 09:00 PM",
-                    pickup=real_pickup_location,
-                    dropoff=real_dropoff_location,
-                    passengers=1,
-                    luggage=0,
-                    customer_comment="Performance test - Safe to ignore",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/01/2025 09:00 PM",
+                        pickup=real_pickup_location,
+                        dropoff=real_dropoff_location,
+                        passengers=1,
+                        luggage=0,
+                        customer_comment="Performance test - Safe to ignore",
+                    )
                 )
 
                 end_time = time.perf_counter()

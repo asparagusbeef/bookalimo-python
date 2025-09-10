@@ -278,7 +278,7 @@ class TestAsyncTransport:
         transport = AsyncTransport(credentials=credentials)
 
         assert transport.base_url == TEST_BASE_URL
-        assert transport.credentials == credentials
+        assert transport._credentials == credentials
         assert transport.client is not None
 
     @pytest.mark.asyncio
@@ -329,9 +329,6 @@ class TestAsyncTransport:
             result = await transport.post(
                 "/booking/price/", request_model, PriceResponse
             )
-
-            print("#" * 100)
-            print(result)
 
             assert result.token == "test-token-123"
             assert result.prices[0].price == 150.00

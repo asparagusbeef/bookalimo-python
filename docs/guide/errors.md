@@ -26,10 +26,12 @@ from bookalimo.exceptions import (
 
 try:
     async with AsyncBookalimo(credentials=creds) as client:
-        quote = await client.pricing.quote(...)
+        quote = await client.pricing.quote(PriceRequest(...))
         booking = await client.reservations.book(
-            token=quote.token,
-            ...,
+            BookRequest(
+                token=quote.token,
+                ...,
+            )
         )
 
 except BookalimoValidationError as e:
@@ -68,7 +70,7 @@ except BookalimoValidationError as e:
 **Authentication Issues**:
 ```python
 try:
-    quote = await client.pricing.quote(...)
+    quote = await client.pricing.quote(PriceRequest(...))
 except BookalimoHTTPError as e:
     if e.status_code == 401:
         print("Check your credentials")
@@ -77,7 +79,9 @@ except BookalimoHTTPError as e:
 **Session Token Expired**:
 ```python
 try:
-    booking = await client.reservations.book(token="expired_token", ...)
+    booking = await client.reservations.book(
+        BookRequest(token="expired_token", ...)
+    )
 except BookalimoHTTPError as e:
     if e.status_code == 400 and "token" in str(e).lower():
         print("Session expired - get new quote")

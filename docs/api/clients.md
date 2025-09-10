@@ -24,8 +24,8 @@ async with AsyncBookalimo(
     credentials=credentials,
     google_places_api_key="optional_google_key",
 ) as client:
-    quote = await client.pricing.quote(...)
-    booking = await client.reservations.book(...)
+    quote = await client.pricing.quote(PriceRequest(...))
+    booking = await client.reservations.book(BookRequest(...))
 ```
 
 ## Bookalimo
@@ -38,8 +38,8 @@ from bookalimo import (
 )
 
 with Bookalimo(credentials=credentials) as client:
-    quote = client.pricing.quote(...)
-    booking = client.reservations.book(...)
+    quote = client.pricing.quote(PriceRequest(...))
+    booking = client.reservations.book(BookRequest(...))
 ```
 
 ## Constructor Parameters

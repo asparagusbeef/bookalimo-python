@@ -116,19 +116,25 @@ async with AsyncBookalimo(
     )
 
     # Get pricing with geocoded pickup
+    from bookalimo.schemas import PriceRequest, BookRequest
+
     quote = await client.pricing.quote(
-        rate_type=RateType.P2P,  # Point-to-point booking
-        date_time="12/25/2024 03:00 PM",  # MM/dd/yyyy hh:mm tt format
-        pickup=pickup,
-        dropoff=dropoff,
-        passengers=2,  # Min 1, validated
-        luggage=2,  # Min 0, validated
+        PriceRequest(
+            rate_type=RateType.P2P,  # Point-to-point booking
+            date_time="12/25/2024 03:00 PM",  # MM/dd/yyyy hh:mm tt format
+            pickup=pickup,
+            dropoff=dropoff,
+            passengers=2,  # Min 1, validated
+            luggage=2,  # Min 0, validated
+        )
     )
 
     # Complete booking
     booking = await client.reservations.book(
-        token=quote.token,
-        method="charge",
+        BookRequest(
+            token=quote.token,
+            method="charge",
+        )
     )
     print(f"Booking confirmed: {booking.reservation_id}")
 ```

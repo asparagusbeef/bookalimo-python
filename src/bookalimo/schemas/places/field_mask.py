@@ -210,12 +210,3 @@ class _Root:
 
 
 F = _Root()  # Usage: F.display_name, F.reviews.text, F.photos.author_attributions
-
-
-if __name__ == "__main__":
-    print(
-        compile_field_mask(
-            "photos.author_attributions,photos.author_attributions.textt",
-            prefix="places",
-        )
-    )

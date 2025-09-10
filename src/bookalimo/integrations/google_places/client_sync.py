@@ -13,6 +13,7 @@ from ...schemas.places import FieldMaskInput
 from ...schemas.places import google as models
 from .common import (
     DEFAULT_PLACE_FIELDS,
+    create_search_text_request,
     handle_autocomplete_impl,
     handle_geocode_response,
     handle_get_place_impl,
@@ -168,6 +169,7 @@ class GooglePlaces:
         query: Optional[str] = None,
         place_id: Optional[str] = None,
         places: Optional[list[models.Place]] = None,
+        country_code: Optional[str] = None,
         max_distance_km: Optional[float] = 100,
         max_results: Optional[int] = 5,
         confidence_threshold: Optional[float] = 0.5,
@@ -180,6 +182,7 @@ class GooglePlaces:
             query: Text query for airport search (optional)
             place_id: Google place ID for proximity matching (optional)
             places: List of existing Place objects for proximity matching (optional)
+            country_code: Country code for proximity matching (optional)
             max_distance_km: Maximum distance for proximity matching (default: 100km)
             max_results: Maximum number of results to return (default: 5)
             confidence_threshold: Minimum confidence threshold (default: 0.5)
@@ -221,9 +224,9 @@ class GooglePlaces:
         elif needs_call and preprocessed_places == []:
             # Need to perform search
             effective_places = self.search(
-                request=models.SearchTextRequest(
-                    text_query=str(preprocessed_query).strip(),
-                    max_result_count=5,
+                request=create_search_text_request(
+                    query=str(preprocessed_query).strip(),
+                    region_code=country_code,
                 )
             )
         else:

@@ -93,8 +93,7 @@ class AsyncBookalimo:
             transport: Custom transport instance (optional)
             google_places_api_key: Google Places API key for location services (optional)
         """
-
-        transport_credentials = transport.credentials if transport else None
+        transport_credentials = transport._credentials if transport else None
 
         both_provided = all([transport_credentials, credentials])
         both_missing = not any([transport_credentials, credentials])
@@ -113,18 +112,21 @@ class AsyncBookalimo:
                 stacklevel=2,
             )
 
-        # Use whichever exists when we need to build a transport ourselves
         effective_credentials = (
-            credentials if credentials is not None else transport_credentials
+            transport_credentials if transport_credentials is not None else credentials
         )
+
         if transport:
-            transport.credentials = effective_credentials
-        self._transport = transport or AsyncTransport(
-            base_url=base_url,
-            timeouts=timeouts,
-            user_agent=user_agent,
-            credentials=effective_credentials,
-        )
+            if transport_credentials is None and credentials is not None:
+                transport.credentials = credentials
+            self._transport = transport
+        else:
+            self._transport = AsyncTransport(
+                base_url=base_url,
+                timeouts=timeouts,
+                user_agent=user_agent,
+                credentials=effective_credentials,
+            )
 
         # Initialize service instances
         self.reservations = AsyncReservationsService(self._transport)
@@ -241,19 +243,40 @@ class Bookalimo:
             transport: Custom transport instance (optional)
             google_places_api_key: Google Places API key for location services (optional)
         """
-        if transport and transport.credentials is not None and credentials is not None:
+        transport_credentials = transport.credentials if transport else None
+
+        both_provided = all([transport_credentials, credentials])
+        both_missing = not any([transport_credentials, credentials])
+
+        if both_provided:
             warnings.warn(
                 "Credentials provided in both transport and constructor. "
                 "The transport credentials will be used.",
-                UserWarning,
+                DuplicateCredentialsWarning,
                 stacklevel=2,
             )
-        self._transport = transport or SyncTransport(
-            base_url=base_url,
-            timeouts=timeouts,
-            user_agent=user_agent,
-            credentials=credentials,
+        elif both_missing:
+            warnings.warn(
+                "No credentials provided in transport or constructor; proceeding unauthenticated.",
+                MissingCredentialsWarning,
+                stacklevel=2,
+            )
+
+        effective_credentials = (
+            transport_credentials if transport_credentials is not None else credentials
         )
+
+        if transport:
+            if transport_credentials is None and credentials is not None:
+                transport.credentials = credentials
+            self._transport = transport
+        else:
+            self._transport = SyncTransport(
+                base_url=base_url,
+                timeouts=timeouts,
+                user_agent=user_agent,
+                credentials=effective_credentials,
+            )
 
         # Initialize service instances
         self.reservations = ReservationsService(self._transport)

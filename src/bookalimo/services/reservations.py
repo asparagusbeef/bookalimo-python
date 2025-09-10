@@ -1,13 +1,9 @@
 """Reservations service for listing, getting, editing, and booking reservations."""
 
-from typing import Any, Optional
-
-from ..exceptions import BookalimoRequestError
 from ..schemas import (
     BookRequest,
     BookResponse,
-    CreditCard,
-    EditableReservationRequest,
+    EditReservationRequest,
     EditReservationResponse,
     GetReservationRequest,
     GetReservationResponse,
@@ -53,73 +49,30 @@ class AsyncReservationsService:
             "/booking/reservation/get/", request, GetReservationResponse
         )
 
-    async def edit(
-        self, confirmation: str, *, is_cancel: bool = False, **changes: Any
-    ) -> EditReservationResponse:
+    async def edit(self, request: EditReservationRequest) -> EditReservationResponse:
         """
         Edit or cancel a reservation.
 
         Args:
-            confirmation: Confirmation number
-            is_cancel: True to cancel the reservation
-            **changes: Fields to change (rate_type, pickup_date, pickup_time,
-                      stops, passengers, luggage, pets, car_seats, boosters,
-                      infants, other)
+            request: Complete edit request with confirmation and fields to change
 
         Returns:
             EditReservationResponse
         """
-        request_data = {
-            "confirmation": confirmation,
-            "is_cancel_request": is_cancel,
-        }
-
-        # Add changes if not canceling
-        if not is_cancel:
-            for key, value in changes.items():
-                if value is not None:
-                    request_data[key] = value
-
-        request = EditableReservationRequest.model_validate(request_data)
         return await self._transport.post(
             "/booking/edit/", request, EditReservationResponse
         )
 
-    async def book(
-        self,
-        token: str,
-        *,
-        method: Optional[str] = None,
-        credit_card: Optional[CreditCard] = None,
-        promo: Optional[str] = None,
-    ) -> BookResponse:
+    async def book(self, request: BookRequest) -> BookResponse:
         """
         Book a reservation.
 
         Args:
-            token: Session token from pricing.quote() or pricing.update_details()
-            method: 'charge' for charge accounts, None for credit card
-            credit_card: Credit card information (required if method is not 'charge')
-            promo: Optional promo code
+            request: Complete booking request with token and payment details
 
         Returns:
             BookResponse with reservation_id
         """
-        request_data: dict[str, Any] = {"token": token}
-
-        if promo:
-            request_data["promo"] = promo
-
-        if method == "charge":
-            request_data["method"] = "charge"
-        elif credit_card:
-            request_data["credit_card"] = credit_card
-        else:
-            raise BookalimoRequestError(
-                "Either method='charge' or credit_card must be provided"
-            )
-
-        request = BookRequest(**request_data)
         return await self._transport.post("/booking/book/", request, BookResponse)
 
 
@@ -159,69 +112,26 @@ class ReservationsService:
             "/booking/reservation/get/", request, GetReservationResponse
         )
 
-    def edit(
-        self, confirmation: str, *, is_cancel: bool = False, **changes: Any
-    ) -> EditReservationResponse:
+    def edit(self, request: EditReservationRequest) -> EditReservationResponse:
         """
         Edit or cancel a reservation.
 
         Args:
-            confirmation: Confirmation number
-            is_cancel: True to cancel the reservation
-            **changes: Fields to change (rate_type, pickup_date, pickup_time,
-                      stops, passengers, luggage, pets, car_seats, boosters,
-                      infants, other)
+            request: Complete edit request with confirmation and fields to change
 
         Returns:
             EditReservationResponse
         """
-        request_data = {
-            "confirmation": confirmation,
-            "is_cancel_request": is_cancel,
-        }
-
-        # Add changes if not canceling
-        if not is_cancel:
-            for key, value in changes.items():
-                if value is not None:
-                    request_data[key] = value
-
-        request = EditableReservationRequest.model_validate(request_data)
         return self._transport.post("/booking/edit/", request, EditReservationResponse)
 
-    def book(
-        self,
-        token: str,
-        *,
-        method: Optional[str] = None,
-        credit_card: Optional[CreditCard] = None,
-        promo: Optional[str] = None,
-    ) -> BookResponse:
+    def book(self, request: BookRequest) -> BookResponse:
         """
         Book a reservation.
 
         Args:
-            token: Session token from pricing.quote() or pricing.update_details()
-            method: 'charge' for charge accounts, None for credit card
-            credit_card: Credit card information (required if method is not 'charge')
-            promo: Optional promo code
+            request: Complete booking request with token and payment details
 
         Returns:
             BookResponse with reservation_id
         """
-        request_data: dict[str, Any] = {"token": token}
-
-        if promo:
-            request_data["promo"] = promo
-
-        if method == "charge":
-            request_data["method"] = "charge"
-        elif credit_card:
-            request_data["credit_card"] = credit_card
-        else:
-            raise BookalimoRequestError(
-                "Either method='charge' or credit_card must be provided"
-            )
-
-        request = BookRequest.model_validate(request_data)
         return self._transport.post("/booking/book/", request, BookResponse)

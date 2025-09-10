@@ -31,14 +31,22 @@ print(f"Can edit: {details.is_editable}")
 Modify or cancel a reservation:
 
 ```python
+from bookalimo.schemas import EditReservationRequest
+
 # Cancel reservation
-await client.reservations.edit("ABC123", is_cancel=True)
+await client.reservations.edit(
+    EditReservationRequest(
+        confirmation="ABC123", is_cancel_request=True
+    )
+)
 
 # Modify details
 await client.reservations.edit(
-    "ABC123",
-    passengers=3,
-    pickup_date="12/26/2024",
+    EditReservationRequest(
+        confirmation="ABC123",
+        passengers=3,
+        pickup_date="12/26/2024",
+    )
 )
 ```
 
@@ -47,15 +55,21 @@ await client.reservations.edit(
 Book a reservation using session token from pricing:
 
 ```python
+from bookalimo.schemas import BookRequest, CreditCard
+
 # Charge account
 booking = await client.reservations.book(
-    token=quote.token,
-    method="charge",
+    BookRequest(
+        token=quote.token,
+        method="charge",
+    )
 )
 
 # Credit card
 booking = await client.reservations.book(
-    token=quote.token,
-    credit_card=CreditCard(...),
+    BookRequest(
+        token=quote.token,
+        credit_card=CreditCard(...),
+    )
 )
 ```

@@ -47,6 +47,8 @@ from bookalimo.schemas import (
     Address,
     City,
     Airport,
+    PriceRequest,
+    BookRequest,
 )
 
 
@@ -76,18 +78,22 @@ async def book_ride():
     async with AsyncBookalimo(credentials=credentials) as client:
         # Get pricing
         quote = await client.pricing.quote(
-            rate_type=RateType.P2P,
-            date_time="12/25/2024 03:00 PM",
-            pickup=pickup,
-            dropoff=dropoff,
-            passengers=2,
-            luggage=2,
+            PriceRequest(
+                rate_type=RateType.P2P,
+                date_time="12/25/2024 03:00 PM",
+                pickup=pickup,
+                dropoff=dropoff,
+                passengers=2,
+                luggage=2,
+            )
         )
 
         # Book reservation
         booking = await client.reservations.book(
-            token=quote.token,
-            method="charge",
+            BookRequest(
+                token=quote.token,
+                method="charge",
+            )
         )
         return booking.reservation_id
 
@@ -103,10 +109,12 @@ from bookalimo import (
 )
 
 with Bookalimo(credentials=credentials) as client:
-    quote = client.pricing.quote(...)
+    quote = client.pricing.quote(PriceRequest(...))
     booking = client.reservations.book(
-        token=quote.token,
-        method="charge",
+        BookRequest(
+            token=quote.token,
+            method="charge",
+        )
     )
 ```
 

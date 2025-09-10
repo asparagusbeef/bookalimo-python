@@ -29,7 +29,7 @@ class TestAsyncBookalimo:
 
         assert client._transport is not None
         assert isinstance(client._transport, AsyncTransport)
-        assert client._transport.credentials == credentials
+        assert client._transport._credentials == credentials
         assert isinstance(client.reservations, AsyncReservationsService)
         assert isinstance(client.pricing, AsyncPricingService)
         assert client._google_places_client is None
@@ -58,7 +58,7 @@ class TestAsyncBookalimo:
             client = AsyncBookalimo()
 
         assert client._transport is not None
-        assert client._transport.credentials is None
+        assert client._transport._credentials is None
 
     def test_init_with_google_places_api_key(self, credentials):
         """Test initialization with Google Places API key."""
@@ -302,7 +302,7 @@ class TestBookalimo:
 class TestClientCreationEdgeCases:
     """Test edge cases in client creation."""
 
-    def test_credentials_precedence_with_different_values(self):
+    def test_credentials_precedence_with_different_values(self) -> None:
         """Test credential precedence when different values provided."""
         creds1 = Credentials.create("user1", "pass1")
         creds2 = Credentials.create("user2", "pass2")
@@ -314,8 +314,8 @@ class TestClientCreationEdgeCases:
         with pytest.warns(DuplicateCredentialsWarning):
             client = AsyncBookalimo(credentials=creds2, transport=transport)
 
-        # Transport credentials should be used but updated
-        assert client._transport.credentials == creds2
+        # Transport credentials should take precedence (as per warning message)
+        assert client._transport._credentials == creds1
 
     def test_none_credentials_handling(self):
         """Test handling of None credentials in various scenarios."""
@@ -324,4 +324,4 @@ class TestClientCreationEdgeCases:
         with pytest.warns(MissingCredentialsWarning):
             client = AsyncBookalimo(transport=transport, credentials=None)
 
-        assert client._transport.credentials is None
+        assert client._transport._credentials is None

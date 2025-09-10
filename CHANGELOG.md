@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional field handling in Google Places models
 
 ### Changed
+- **BREAKING**: All service methods now accept request objects directly instead of individual parameters
+  - `pricing.quote(PriceRequest)` instead of `pricing.quote(rate_type, date_time, pickup, ...)`
+  - `pricing.update_details(DetailsRequest)` instead of `pricing.update_details(token, **details)`
+  - `reservations.book(BookRequest)` instead of `reservations.book(token, method=...)`
+  - `reservations.edit(EditReservationRequest)` instead of `reservations.edit(confirmation, **changes)`
+- **BREAKING**: Schema architecture cleanup for better maintainability
+  - Moved `EditReservationRequest` definition from shared.py to requests.py
+  - Removed duplicate `EditReservationRequest` from responses.py
+  - Added `ReservationData` for reservation data in API responses
+  - Eliminated confusing inheritance patterns and improved separation of concerns
 - **BREAKING**: Complete schema architecture overhaul - request models serialize to camelCase, response models to snake_case
 - **BREAKING**: Schema imports updated to `from bookalimo.schemas import`
 - **BREAKING**: Method calls updated from `search_text` to `search`

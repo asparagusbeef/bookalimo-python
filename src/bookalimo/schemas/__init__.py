@@ -35,7 +35,7 @@ from .requests import (
     City,
     CreditCard,
     DetailsRequest,
-    EditableReservationRequest,
+    EditReservationRequest,
     GetReservationRequest,
     ListReservationsRequest,
     Location,
@@ -68,6 +68,7 @@ from .responses import (
     GetReservationResponse,
     ListReservationsResponse,
     PriceResponse,
+    ReservationData,
 )
 from .responses import (
     BreakdownItem as BreakdownItemResponse,
@@ -77,9 +78,6 @@ from .responses import (
 )
 from .responses import (
     CreditCard as CreditCardResponse,
-)
-from .responses import (
-    EditableReservationRequest as EditableReservationRequestResponse,
 )
 from .responses import (
     Location as LocationResponse,
@@ -134,7 +132,7 @@ __all__ = [
     "MeetGreetAdditional",
     "Price",
     "Reservation",
-    "EditableReservationRequest",
+    "EditReservationRequest",
     "PriceRequest",
     "DetailsRequest",
     "BookRequest",
@@ -155,7 +153,7 @@ __all__ = [
     "BreakdownItemResponse",
     "CityResponse",
     "CreditCardResponse",
-    "EditableReservationRequestResponse",
+    "ReservationData",
     "LocationResponse",
     "MeetGreetResponse",
     "MeetGreetAdditionalResponse",

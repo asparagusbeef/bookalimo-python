@@ -11,14 +11,18 @@ from bookalimo.exceptions import BookalimoHTTPError, BookalimoTimeout
 from bookalimo.schemas import (
     Address,
     Airport,
+    BookRequest,
     BookResponse,
     City,
+    DetailsRequest,
     DetailsResponse,
+    EditReservationRequest,
     EditReservationResponse,
     GetReservationResponse,
     ListReservationsResponse,
     Location,
     LocationType,
+    PriceRequest,
     PriceResponse,
     RateType,
 )
@@ -111,13 +115,15 @@ class TestEndToEndBookingFlow:
             async with AsyncBookalimo(credentials=credentials) as client:
                 # Step 1: Get initial quote
                 quote = await client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="09/15/2025 03:00 PM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=2,
-                    luggage=2,
-                    customer_comment="Please arrive 10 minutes early",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="09/15/2025 03:00 PM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=2,
+                        luggage=2,
+                        customer_comment="Please arrive 10 minutes early",
+                    )
                 )
 
                 assert isinstance(quote, PriceResponse)
@@ -128,9 +134,11 @@ class TestEndToEndBookingFlow:
 
                 # Step 2: Update details (upgrade car class)
                 updated_details = await client.pricing.update_details(
-                    token=quote.token,
-                    car_class_code="SUV",
-                    customer_comment="Upgraded to SUV, please arrive 10 minutes early",
+                    DetailsRequest(
+                        token=quote.token,
+                        car_class_code="SUV",
+                        customer_comment="Upgraded to SUV, please arrive 10 minutes early",
+                    )
                 )
 
                 assert isinstance(updated_details, DetailsResponse)
@@ -145,7 +153,7 @@ class TestEndToEndBookingFlow:
 
                 # Step 3: Book the reservation
                 booking = await client.reservations.book(
-                    token=quote.token, credit_card=test_credit_card
+                    BookRequest(token=quote.token, credit_card=test_credit_card)
                 )
 
                 assert isinstance(booking, BookResponse)
@@ -190,12 +198,14 @@ class TestEndToEndBookingFlow:
             with Bookalimo(credentials=credentials) as client:
                 # Step 1: Get quote
                 quote = client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="09/20/2025 02:00 PM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=1,
-                    luggage=1,
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="09/20/2025 02:00 PM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=1,
+                        luggage=1,
+                    )
                 )
 
                 assert quote.token == "sync-integration-token-98765"
@@ -203,7 +213,9 @@ class TestEndToEndBookingFlow:
                 assert quote.prices[0].price == 150.00
 
                 # Step 2: Book with charge method (corporate account)
-                booking = client.reservations.book(token=quote.token, method="charge")
+                booking = client.reservations.book(
+                    BookRequest(token=quote.token, method="charge")
+                )
 
                 assert booking.reservation_id == "RES_SYNC_INTEGRATION_789"
 
@@ -298,10 +310,12 @@ class TestEndToEndBookingFlow:
 
                 # Step 3: Edit the reservation (change passenger count)
                 edit_result = await client.reservations.edit(
-                    "CONF_MGR_001",
-                    passengers=3,
-                    pickup_time="14:30",
-                    other="Changed passenger count and pickup time",
+                    EditReservationRequest(
+                        confirmation="CONF_MGR_001",
+                        passengers=3,
+                        pickup_time="14:30",
+                        other="Changed passenger count and pickup time",
+                    )
                 )
 
                 assert isinstance(edit_result, EditReservationResponse)
@@ -347,12 +361,14 @@ class TestEndToEndBookingFlow:
             async with AsyncBookalimo(credentials=credentials) as client:
                 # Step 1: Successful quote
                 quote = await client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="09/25/2025 12:00 PM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=2,
-                    luggage=1,
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="09/25/2025 12:00 PM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=2,
+                        luggage=1,
+                    )
                 )
 
                 assert quote.token == "error-test-token-123"
@@ -360,7 +376,9 @@ class TestEndToEndBookingFlow:
                 # Step 2: Failed details update should raise proper exception
                 with pytest.raises(BookalimoHTTPError) as exc_info:
                     await client.pricing.update_details(
-                        token=quote.token, car_class_code="INVALID_CLASS"
+                        DetailsRequest(
+                            token=quote.token, car_class_code="INVALID_CLASS"
+                        )
                     )
 
                 assert exc_info.value.status_code == 400
@@ -382,12 +400,14 @@ class TestEndToEndBookingFlow:
                 # Should handle timeout gracefully
                 with pytest.raises(BookalimoTimeout):
                     await client.pricing.quote(
-                        rate_type=RateType.P2P,
-                        date_time="09/25/2025 12:00 PM",
-                        pickup=pickup,
-                        dropoff=dropoff,
-                        passengers=2,
-                        luggage=1,
+                        PriceRequest(
+                            rate_type=RateType.P2P,
+                            date_time="09/25/2025 12:00 PM",
+                            pickup=pickup,
+                            dropoff=dropoff,
+                            passengers=2,
+                            luggage=1,
+                        )
                     )
 
     @pytest.mark.asyncio
@@ -430,12 +450,14 @@ class TestEndToEndBookingFlow:
             async with AsyncBookalimo(credentials=credentials) as client:
                 # Run quote and list reservations concurrently
                 quote_task = client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="09/25/2025 12:00 PM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=2,
-                    luggage=1,
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="09/25/2025 12:00 PM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=2,
+                        luggage=1,
+                    )
                 )
 
                 list_task = client.reservations.list()
@@ -542,12 +564,14 @@ class TestGooglePlacesIntegration:
 
                     # Get quote using Places-resolved location
                     quote = client.pricing.quote(
-                        rate_type=RateType.P2P,
-                        date_time="09/30/2025 04:00 PM",
-                        pickup=pickup,
-                        dropoff=dropoff,
-                        passengers=2,
-                        luggage=2,
+                        PriceRequest(
+                            rate_type=RateType.P2P,
+                            date_time="09/30/2025 04:00 PM",
+                            pickup=pickup,
+                            dropoff=dropoff,
+                            passengers=2,
+                            luggage=2,
+                        )
                     )
 
                     assert quote.token == "places-integration-token"
@@ -556,7 +580,7 @@ class TestGooglePlacesIntegration:
 
                     # Book using the quote
                     booking = client.reservations.book(
-                        token=quote.token, credit_card=test_credit_card
+                        BookRequest(token=quote.token, credit_card=test_credit_card)
                     )
 
                     assert booking.reservation_id == "RES_PLACES_123"
@@ -653,15 +677,17 @@ class TestRealWorldScenarios:
             async with AsyncBookalimo(credentials=credentials) as client:
                 # Quote for multi-stop trip
                 quote = await client.pricing.quote(
-                    rate_type=RateType.HOURLY,
-                    date_time="10/01/2025 08:00 AM",
-                    pickup=locations[0],  # Hotel
-                    dropoff=locations[3],  # Airport (final destination)
-                    passengers=1,
-                    luggage=1,
-                    hours=6,  # Full day service
-                    car_class_code="LUXURY",
-                    customer_comment="Business trip with multiple stops. Driver should wait at each location.",
+                    PriceRequest(
+                        rate_type=RateType.HOURLY,
+                        date_time="10/01/2025 08:00 AM",
+                        pickup=locations[0],  # Hotel
+                        dropoff=locations[3],  # Airport (final destination)
+                        passengers=1,
+                        luggage=1,
+                        hours=6,  # Full day service
+                        car_class_code="LUXURY",
+                        customer_comment="Business trip with multiple stops. Driver should wait at each location.",
+                    )
                 )
 
                 assert len(quote.prices) > 0
@@ -670,8 +696,10 @@ class TestRealWorldScenarios:
 
                 # Book the trip
                 booking = await client.reservations.book(
-                    token=quote.token,
-                    method="charge",  # Corporate account
+                    BookRequest(
+                        token=quote.token,
+                        method="charge",  # Corporate account
+                    )
                 )
 
                 assert booking.reservation_id == "RES_BUSINESS_001"
@@ -750,13 +778,15 @@ class TestRealWorldScenarios:
             with Bookalimo(credentials=credentials) as client:
                 # Initial quote for family trip
                 quote = client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time="12/20/2025 06:00 AM",
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=4,  # 2 adults, 2 children
-                    luggage=4,  # Vacation luggage
-                    customer_comment="Family vacation trip - early morning flight",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time="12/20/2025 06:00 AM",
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=4,  # 2 adults, 2 children
+                        luggage=4,  # Vacation luggage
+                        customer_comment="Family vacation trip - early morning flight",
+                    )
                 )
 
                 assert len(quote.prices) > 0
@@ -764,18 +794,22 @@ class TestRealWorldScenarios:
 
                 # Update to add car seats for children
                 updated_quote = client.pricing.update_details(
-                    token=quote.token,
-                    car_seats=2,  # 2 car seats for children
-                    customer_comment="Family vacation trip - early morning flight. Need 2 car seats for children ages 3 and 5.",
+                    DetailsRequest(
+                        token=quote.token,
+                        car_seats=2,  # 2 car seats for children
+                        customer_comment="Family vacation trip - early morning flight. Need 2 car seats for children ages 3 and 5.",
+                    )
                 )
 
                 assert updated_quote.price == 140.00  # Higher due to car seats
 
                 # Book the family trip
                 booking = client.reservations.book(
-                    token=quote.token,
-                    credit_card=test_credit_card,
-                    promo="FAMILY10",  # Family discount
+                    BookRequest(
+                        token=quote.token,
+                        credit_card=test_credit_card,
+                        promo="FAMILY10",  # Family discount
+                    )
                 )
 
                 assert booking.reservation_id == "RES_FAMILY_001"
@@ -853,18 +887,20 @@ class TestRealWorldScenarios:
                 booking_time = now.strftime("%m/%d/%Y %I:%M %p")
 
                 quote = await client.pricing.quote(
-                    rate_type=RateType.P2P,
-                    date_time=booking_time,
-                    pickup=pickup,
-                    dropoff=dropoff,
-                    passengers=2,
-                    luggage=0,
-                    customer_comment="URGENT: Medical emergency transport needed ASAP",
+                    PriceRequest(
+                        rate_type=RateType.P2P,
+                        date_time=booking_time,
+                        pickup=pickup,
+                        dropoff=dropoff,
+                        passengers=2,
+                        luggage=0,
+                        customer_comment="URGENT: Medical emergency transport needed ASAP",
+                    )
                 )
 
                 # Immediate booking without details update
                 booking = await client.reservations.book(
-                    token=quote.token, credit_card=test_credit_card
+                    BookRequest(token=quote.token, credit_card=test_credit_card)
                 )
 
                 assert booking.reservation_id == "RES_URGENT_001"

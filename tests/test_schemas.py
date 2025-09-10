@@ -10,7 +10,7 @@ from bookalimo.schemas import (
     CarClassPrice,
     City,
     CreditCard,
-    EditableReservationRequest,
+    EditReservationRequest,
     GetReservationRequest,
     ListReservationsRequest,
     Location,
@@ -445,7 +445,7 @@ class TestReservationSchemas:
 
     def test_edit_reservation_request_cancel(self):
         """Test edit reservation request for cancellation."""
-        request = EditableReservationRequest(
+        request = EditReservationRequest(
             confirmation="CANCEL123", is_cancel_request=True
         )
 
@@ -454,7 +454,7 @@ class TestReservationSchemas:
 
     def test_edit_reservation_request_modify(self):
         """Test edit reservation request for modification."""
-        request = EditableReservationRequest(
+        request = EditReservationRequest(
             confirmation="MODIFY123",
             is_cancel_request=False,
             passengers=4,

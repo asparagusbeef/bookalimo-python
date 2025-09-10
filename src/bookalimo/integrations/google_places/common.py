@@ -19,6 +19,7 @@ from ...schemas.places import (
     GooglePlace,
     Place,
     PlaceType,
+    RankPreference,
     compile_field_mask,
 )
 from ...schemas.places import (
@@ -432,6 +433,20 @@ def _prepare_get_params_and_metadata(
     request_params = _build_get_place_request(place_id, request)
     metadata = _mask_header(fields)
     return request_params, metadata
+
+
+def create_search_text_request(
+    query: str,
+    region_code: Optional[str],
+) -> models.SearchTextRequest:
+    return models.SearchTextRequest(
+        text_query=query,
+        region_code=region_code,
+        max_result_count=5,
+        rank_preference=RankPreference.RELEVANCE,
+        # included_type="airport",
+        strict_type_filtering=False,
+    )
 
 
 def handle_resolve_airport_preprocessing(
