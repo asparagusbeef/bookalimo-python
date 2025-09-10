@@ -161,7 +161,7 @@ def _frozen_np_float(arr_like: List[float]) -> NDArray[np.float64]:
     """Create a float64 numpy array and set writeable=False."""
     a = np.array(arr_like, dtype=np.float64)
     a.setflags(write=False)
-    return cast(NDArray[np.float64], a)
+    return a
 
 
 def _frozen_np_bool(arr_like: List[bool]) -> NDArray[np.bool_]:
